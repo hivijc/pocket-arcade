@@ -34,9 +34,17 @@ export function isMoving(b: Ball): boolean {
   return b.airborne || b.vx !== 0 || b.vy !== 0;
 }
 
-export function strike(ball: Ball, angle: number, power: number): Ball {
+/** The ground's rise rate (height per second) for a ball at (x, y) rolling with velocity (vx, vy). */
+function groundRise(hole: Hole, x: number, y: number, vx: number, vy: number): number {
+  const [gx, gy] = gradientAt(hole, x, y);
+  return gx * vx + gy * vy;
+}
+
+export function strike(ball: Ball, hole: Hole, angle: number, power: number): Ball {
   const s = Math.max(0, Math.min(1, power)) * MAX_PUTT_SPEED;
-  return { ...ball, vx: Math.cos(angle) * s, vy: Math.sin(angle) * s, vz: 0, airborne: false };
+  const vx = Math.cos(angle) * s;
+  const vy = Math.sin(angle) * s;
+  return { ...ball, vx, vy, vz: groundRise(hole, ball.x, ball.y, vx, vy), airborne: false };
 }
 
 const frictionOf = (s: Surface | null): number => (s === 'R' ? FRICTION.R : s === 'S' ? FRICTION.S : FRICTION.G);
@@ -94,7 +102,10 @@ function collide(b: Ball, hole: Hole, events: BallEvent[]): Ball {
   }
   for (const c of hole.circles) pushOut(c.c[0], c.c[1], c.r + BALL_R);
   if (hit) events.push('wall');
-  return x === b.x && y === b.y && vx === b.vx && vy === b.vy ? b : { ...b, x, y, vx, vy };
+  if (x === b.x && y === b.y && vx === b.vx && vy === b.vy) return b;
+  // A grounded ball redirected by a wall follows the ground along its new path; an airborne one keeps its vz.
+  const vz = hit && !b.airborne ? groundRise(hole, x, y, vx, vy) : b.vz;
+  return { ...b, x, y, vx, vy, vz };
 }
 
 function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
@@ -118,7 +129,7 @@ function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
     events.push('holed');
     return { ...halt(b), x: hole.cup[0], y: hole.cup[1], z, overCup: true };
   }
-  let vx = b.vx, vy = b.vy;
+  let vx = b.vx, vy = b.vy, vz = b.vz;
   if (entering) {
     events.push('lip');
     const side = Math.sign(vx * ty - vy * tx); // cup to the left (+) or right (-) of travel
@@ -126,11 +137,12 @@ function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
     [vx, vy] = [(vx * Math.cos(a) - vy * Math.sin(a)) * LIP_KEEP, (vx * Math.sin(a) + vy * Math.cos(a)) * LIP_KEEP];
   }
   const [gx, gy] = gradientAt(hole, b.x, b.y);
+  if (entering) vz = gx * vx + gy * vy;
   if (Math.hypot(vx, vy) < STOP_SPEED && SLOPE_ACCEL * Math.hypot(gx, gy) < frictionOf(surf)) {
     events.push('stopped');
     return { ...halt(b), z, overCup };
   }
-  return { ...b, z, vx, vy, overCup };
+  return { ...b, z, vx, vy, vz, overCup };
 }
 
 export function step(ball: Ball, hole: Hole, dt: number = STEP): StepResult {

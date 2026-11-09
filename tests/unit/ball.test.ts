@@ -3,7 +3,10 @@ import { isMoving, restingBall, step, strike, type Ball, type BallEvent } from '
 import { simulateShot } from '../../src/physics/simulate';
 import { BALL_R, FRICTION, MAX_PUTT_SPEED } from '../../src/physics/constants';
 import { makeHole } from '../helpers/makeHole';
-import type { Hole } from '../../src/world/hole';
+import { parseHole, type Hole } from '../../src/world/hole';
+import { parseManifest } from '../../src/world/manifest';
+import manifestJson from '../../assets/manifest.json';
+import hole1Json from '../../src/world/holes/01.json';
 
 const speed = (b: Ball) => Math.hypot(b.vx, b.vy);
 
@@ -25,7 +28,7 @@ describe('strike and rest', () => {
 
   it('strike sets velocity from angle and power, clamped to 0..1', () => {
     const hole = makeHole();
-    const b = strike(restingBall(hole, [2.5, 2.5]), Math.PI / 2, 2);
+    const b = strike(restingBall(hole, [2.5, 2.5]), hole, Math.PI / 2, 2);
     expect(b.vx).toBeCloseTo(0);
     expect(b.vy).toBeCloseTo(MAX_PUTT_SPEED);
   });
@@ -52,8 +55,8 @@ describe('rolling', () => {
   it('rolls further downhill than on the flat', () => {
     const downhill = makeHole({ heightOf: (x) => -2 * x });
     const flat = makeHole();
-    const a = runSteps(downhill, strike(restingBall(downhill, [2.5, 2.5]), 0, 0.2), 60);
-    const b = runSteps(flat, strike(restingBall(flat, [2.5, 2.5]), 0, 0.2), 60);
+    const a = runSteps(downhill, strike(restingBall(downhill, [2.5, 2.5]), downhill, 0, 0.2), 60);
+    const b = runSteps(flat, strike(restingBall(flat, [2.5, 2.5]), flat, 0, 0.2), 60);
     expect(a.x).toBeGreaterThan(b.x);
   });
 
@@ -68,7 +71,7 @@ describe('rolling', () => {
 describe('collisions', () => {
   it('bounces off a wall keeping about 70% of its speed', () => {
     const hole = makeHole({ width: 6, cup: [4.5, 0.5] });
-    let ball = strike(restingBall(hole, [3, 2.5]), 0, 0.5);
+    let ball = strike(restingBall(hole, [3, 2.5]), hole, 0, 0.5);
     for (let i = 0; i < 1000; i++) {
       const r = step(ball, hole);
       if (r.events.includes('wall')) {
@@ -92,7 +95,7 @@ describe('collisions', () => {
 
   it('never passes through a wall at full speed', () => {
     const hole = makeHole({ width: 6, cup: [4.5, 0.5] });
-    let ball = strike(restingBall(hole, [3, 2.5]), 0, 1);
+    let ball = strike(restingBall(hole, [3, 2.5]), hole, 0, 1);
     for (let i = 0; i < 300; i++) {
       ball = step(ball, hole).ball;
       expect(ball.x).toBeLessThanOrEqual(6 - BALL_R + 1e-9);
@@ -160,7 +163,7 @@ describe('hazards and hops', () => {
 
   it('launches off a ramp lip and lands', () => {
     const ramp = makeHole({ heightOf: (x) => (x === 5 ? 2 : x === 6 ? 4 : 0) });
-    let ball = strike(restingBall(ramp, [1.5, 2.5]), 0, 1);
+    let ball = strike(restingBall(ramp, [1.5, 2.5]), ramp, 0, 1);
     let sawAirborne = false;
     let landed = false;
     for (let i = 0; i < 2000 && isMoving(ball); i++) {
@@ -171,6 +174,45 @@ describe('hazards and hops', () => {
     }
     expect(sawAirborne).toBe(true);
     expect(landed).toBe(true);
+  });
+});
+
+describe('no spurious hops', () => {
+  /** Steps until the ball rests; true if it ever left the ground. */
+  function everAirborne(hole: Hole, ball: Ball): boolean {
+    let b = ball;
+    for (let i = 0; i < 5000 && isMoving(b); i++) {
+      b = step(b, hole).ball;
+      if (b.airborne) return true;
+    }
+    return false;
+  }
+
+  it('a ball struck downhill from rest on a slope stays grounded', () => {
+    const hole = parseHole(hole1Json, parseManifest(manifestJson), 'holes/01.json');
+    const struck = strike(restingBall(hole, [5.5, 3.5]), hole, Math.PI, 0.9);
+    expect(step(struck, hole).ball.airborne).toBe(false);
+    expect(everAirborne(hole, struck)).toBe(false);
+  });
+
+  it('strike sets vz to the ground rise rate along the new velocity', () => {
+    const slope = makeHole({ heightOf: (x) => x });
+    const b = strike(restingBall(slope, [2.5, 2.5]), slope, Math.PI, 0.5);
+    const [gx, gy] = [0.25, 0];
+    expect(b.vz).toBeCloseTo(gx * b.vx + gy * b.vy);
+  });
+
+  it('a ball bouncing off a wall on a slope does not launch', () => {
+    const hole = makeHole({ width: 6, cup: [4.5, 0.5], heightOf: (x) => x });
+    const ball = strike(restingBall(hole, [3, 2.5]), hole, 0, 0.8);
+    let b = ball, hitWall = false;
+    for (let i = 0; i < 5000 && isMoving(b); i++) {
+      const r = step(b, hole);
+      hitWall ||= r.events.includes('wall');
+      b = r.ball;
+      expect(b.airborne).toBe(false);
+    }
+    expect(hitWall).toBe(true);
   });
 });
 

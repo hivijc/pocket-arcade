@@ -71,10 +71,10 @@ function ready(s: GameState, holes: readonly Hole[]): GameState {
   return current(s) >= STROKE_CAP ? finishHole(s, holes) : { ...s, phase: { kind: 'aiming' } };
 }
 
-function shoot(s: GameState, angle: number, power: number): GameState {
+function shoot(s: GameState, angle: number, power: number, holes: readonly Hole[]): GameState {
   return {
     ...withStrokes(s, current(s) + 1),
-    ball: strike(s.ball, angle, power),
+    ball: strike(s.ball, holes[s.holeIndex], angle, power),
     lastRest: [s.ball.x, s.ball.y],
     aim: angle,
     phase: { kind: 'rolling', t: 0 },
@@ -92,9 +92,9 @@ export function reduce(s: GameState, a: Action, holes: readonly Hole[]): GameSta
       if (p.kind === 'title' || p.kind === 'scorecard') return newGame(holes);
       return p.kind === 'aiming' ? { ...s, phase: { kind: 'charging', t: 0 } } : s;
     case 'release':
-      return p.kind === 'charging' ? shoot(s, s.aim, chargePower(p.t)) : s;
+      return p.kind === 'charging' ? shoot(s, s.aim, chargePower(p.t), holes) : s;
     case 'putt':
-      return p.kind === 'aiming' ? shoot(s, a.angle, a.power) : s;
+      return p.kind === 'aiming' ? shoot(s, a.angle, a.power, holes) : s;
     case 'retry': {
       if (p.kind !== 'aiming' && p.kind !== 'charging') return s;
       const hole = holes[s.holeIndex];

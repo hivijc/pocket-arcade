@@ -15,7 +15,7 @@ const ENDINGS: readonly BallEvent[] = ['holed', 'water', 'stopped'];
 
 export function simulateShot(hole: Hole, from: Ball, angle: number, power: number, maxSeconds = MAX_SIM_SECONDS): ShotResult {
   const maxSteps = Math.ceil(maxSeconds / STEP);
-  let ball = strike(from, angle, power);
+  let ball = strike(from, hole, angle, power);
   const events: BallEvent[] = [];
   for (let i = 1; i <= maxSteps; i++) {
     const r = step(ball, hole);
