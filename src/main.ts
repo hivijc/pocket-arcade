@@ -85,9 +85,7 @@ function boot(): void {
     if (e.type === 'escape') {
       dispatch({ type: 'togglePause' });
     } else if (e.type === 'aimAt') {
-      const b = state.ball;
-      const [gx, gy] = unproject(views[state.holeIndex], e.sx, e.sy, b.z);
-      dispatch({ type: 'aim', angle: Math.atan2(gy - b.y, gx - b.x) });
+      dispatch({ type: 'aimAt', point: unproject(views[state.holeIndex], e.sx, e.sy, state.ball.z) });
     } else {
       dispatch({ type: e.type });
     }

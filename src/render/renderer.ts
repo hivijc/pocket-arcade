@@ -1,5 +1,5 @@
 import type { Vec2 } from '../core/geometry';
-import type { GameState } from '../game/state';
+import { aimAngle, type GameState } from '../game/state';
 import { heightAt } from '../physics/terrain';
 import type { Hole } from '../world/hole';
 import type { Manifest } from '../world/manifest';
@@ -99,7 +99,8 @@ function ball(f: Frame): Drawable[] {
 function golfer(f: Frame): Drawable[] {
   const k = f.state.phase.kind;
   if (k !== 'aiming' && k !== 'charging') return [];
-  const { ball: b, aim } = f.state;
+  const b = f.state.ball;
+  const aim = aimAngle(f.state);
   const x = b.x + Math.cos(aim + Math.PI / 2) * 0.35 - Math.cos(aim) * 0.15;
   const y = b.y + Math.sin(aim + Math.PI / 2) * 0.35 - Math.sin(aim) * 0.15;
   const [sx, sy] = ground(f, x, y);
@@ -124,7 +125,8 @@ function drawCup(ctx: CanvasRenderingContext2D, f: Frame): void {
 function drawAim(ctx: CanvasRenderingContext2D, f: Frame): void {
   const k = f.state.phase.kind;
   if (k !== 'aiming' && k !== 'charging') return;
-  const { ball: b, aim } = f.state;
+  const b = f.state.ball;
+  const aim = aimAngle(f.state);
   for (let i = 1; i <= AIM_DOTS; i++) {
     const d = i * AIM_SPACING;
     const [sx, sy] = ground(f, b.x + Math.cos(aim) * d, b.y + Math.sin(aim) * d);

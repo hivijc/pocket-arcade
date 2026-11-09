@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  HOLED_SECONDS, INTRO_SECONDS, chargePower, clearEvents, initialState, reduce, update, type GameState,
+  HOLED_SECONDS, INTRO_SECONDS, aimAngle, chargePower, clearEvents, initialState, reduce, update, type GameState,
 } from '../../src/game/state';
 import { STEP } from '../../src/physics/constants';
 import type { Hole } from '../../src/world/hole';
@@ -197,5 +197,43 @@ describe('events', () => {
     const cleared = clearEvents(s);
     expect(cleared.events).toEqual([]);
     expect(clearEvents(cleared)).toBe(cleared);
+  });
+});
+
+describe('aiming at a cursor point', () => {
+  it('falls back to the stored angle without a cursor point', () => {
+    const s = reduce(aimingOn(), { type: 'aim', angle: 1.2 }, HOLES);
+    expect(s.aimPoint).toBeNull();
+    expect(aimAngle(s)).toBe(1.2);
+  });
+
+  it('points from the ball to the cursor point', () => {
+    const s = reduce(aimingOn(), { type: 'aimAt', point: [1.5, 4.5] }, HOLES);
+    expect(aimAngle(s)).toBeCloseTo(Math.PI / 2);
+  });
+
+  it('after the ball moves, the angle points from its new position to the same cursor point', () => {
+    const point: [number, number] = [6.5, 4.5];
+    const aimed = reduce(aimingOn(), { type: 'aimAt', point }, HOLES);
+    const before = aimAngle(aimed);
+    const rolled = runUntil(reduce(aimed, { type: 'putt', angle: 0, power: 0.1 }, HOLES), kind('aiming'));
+    expect(rolled.ball.x).toBeGreaterThan(HOLES[0].tee[0]);
+    const expected = Math.atan2(point[1] - rolled.ball.y, point[0] - rolled.ball.x);
+    expect(aimAngle(rolled)).toBeCloseTo(expected);
+    expect(aimAngle(rolled)).not.toBeCloseTo(before);
+  });
+
+  it('release shoots along the angle to the cursor point', () => {
+    const aimed = reduce(aimingOn(), { type: 'aimAt', point: [1.5, 4.5] }, HOLES);
+    const charged = update(reduce(aimed, { type: 'press' }, HOLES), 0.5, HOLES);
+    const rolling = reduce(charged, { type: 'release' }, HOLES);
+    expect(rolling.ball.vx).toBeCloseTo(0);
+    expect(rolling.ball.vy).toBeGreaterThan(0);
+  });
+
+  it('a cursor exactly on the ball keeps the stored angle', () => {
+    const s0 = reduce(aimingOn(), { type: 'aim', angle: 0.7 }, HOLES);
+    const s = reduce(s0, { type: 'aimAt', point: [s0.ball.x, s0.ball.y] }, HOLES);
+    expect(aimAngle(s)).toBe(0.7);
   });
 });

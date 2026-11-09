@@ -24,8 +24,10 @@ export interface GameState {
   readonly ball: Ball;
   /** Where the ball was last struck from (water resets here). */
   readonly lastRest: Vec2;
-  /** Aim angle in radians, in grid space. */
+  /** Aim angle in radians, in grid space (used when there is no cursor point). */
   readonly aim: number;
+  /** The grid point under the cursor; the aim is re-derived from the ball's current position. */
+  readonly aimPoint: Vec2 | null;
   /** Ball events since the last clearEvents (for sounds and effects); the main loop clears them once per frame. */
   readonly events: readonly BallEvent[];
   /** True while the pause menu is open: time stands still and only pause/resume/start are handled. */
@@ -35,6 +37,7 @@ export interface GameState {
 export type Action =
   | { readonly type: 'start' }
   | { readonly type: 'aim'; readonly angle: number }
+  | { readonly type: 'aimAt'; readonly point: Vec2 }
   | { readonly type: 'press' }
   | { readonly type: 'release' }
   | { readonly type: 'retry' }
@@ -51,6 +54,13 @@ export function chargePower(t: number): number {
   return m <= half ? m / half : (CHARGE_PERIOD - m) / half;
 }
 
+/** The aim angle: from the ball toward the cursor point when there is one, else the stored angle. */
+export function aimAngle(s: GameState): number {
+  if (!s.aimPoint) return s.aim;
+  const dx = s.aimPoint[0] - s.ball.x, dy = s.aimPoint[1] - s.ball.y;
+  return dx === 0 && dy === 0 ? s.aim : Math.atan2(dy, dx);
+}
+
 const atTee = (hole: Hole): Ball => restingBall(hole, hole.tee);
 const current = (s: GameState): number => s.strokes[s.holeIndex];
 const withStrokes = (s: GameState, n: number): GameState => ({
@@ -60,7 +70,7 @@ const withStrokes = (s: GameState, n: number): GameState => ({
 
 export function initialState(holes: readonly Hole[]): GameState {
   const first = holes[0];
-  return { phase: { kind: 'title' }, holeIndex: 0, strokes: [0], ball: atTee(first), lastRest: first.tee, aim: 0, events: [], paused: false };
+  return { phase: { kind: 'title' }, holeIndex: 0, strokes: [0], ball: atTee(first), lastRest: first.tee, aim: 0, aimPoint: null, events: [], paused: false };
 }
 
 function newGame(holes: readonly Hole[]): GameState {
@@ -113,12 +123,14 @@ function play(s: GameState, a: PlayAction, holes: readonly Hole[]): GameState {
     case 'cancel':
       return uncharge(s);
     case 'aim':
-      return { ...s, aim: a.angle };
+      return { ...s, aim: a.angle, aimPoint: null };
+    case 'aimAt':
+      return { ...s, aimPoint: a.point };
     case 'press':
       if (p.kind === 'title' || p.kind === 'scorecard') return newGame(holes);
       return p.kind === 'aiming' ? { ...s, phase: { kind: 'charging', t: 0 } } : s;
     case 'release':
-      return p.kind === 'charging' ? shoot(s, s.aim, chargePower(p.t), holes) : s;
+      return p.kind === 'charging' ? shoot(s, aimAngle(s), chargePower(p.t), holes) : s;
     case 'putt':
       return p.kind === 'aiming' ? shoot(s, a.angle, a.power, holes) : s;
     case 'retry': {
@@ -133,7 +145,7 @@ function advance(s: GameState, holes: readonly Hole[]): GameState {
   const next = s.holeIndex + 1;
   if (next >= holes.length) return { ...s, phase: { kind: 'scorecard' } };
   const hole = holes[next];
-  return { ...s, holeIndex: next, strokes: [...s.strokes, 0], ball: atTee(hole), lastRest: hole.tee, phase: { kind: 'intro', t: 0 } };
+  return { ...s, holeIndex: next, strokes: [...s.strokes, 0], ball: atTee(hole), lastRest: hole.tee, aimPoint: null, phase: { kind: 'intro', t: 0 } };
 }
 
 function roll(s: GameState, t: number, dt: number, holes: readonly Hole[]): GameState {
