@@ -4,7 +4,7 @@ import { attachInput, type InputEvent } from './core/input';
 import { createStepper, startLoop } from './core/loop';
 import { loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
-import { ambienceFor, audioTransition, rollSpeedOf, shouldPlayAudio, soundsFor } from './audio/sfx-math';
+import { audioTransition, rollSpeedOf, shouldPlayAudio, soundsFor } from './audio/sfx-math';
 import { createSfx, type Sfx } from './audio/sfx';
 import { MAX_PUTT_SPEED, STEP } from './physics/constants';
 import { unproject } from './render/iso';
@@ -156,7 +156,6 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
   let phase: PhaseId = currentPhase();
   watchPhase((p) => {
     phase = p;
-    audio.sfx.setAmbience(ambienceFor(p));
   });
 
   const frame = createFrame({

@@ -1,18 +1,18 @@
-import { puttPitch, puttVolume, rollVolume, type Ambience, type Sound } from './sfx-math';
+import { puttPitch, puttVolume, rollVolume, type Sound } from './sfx-math';
 
+/** Sound effects only: there is deliberately no background music or ambience. */
 export interface Sfx {
   /** Call from a user gesture: browsers only allow audio to start after one. */
   unlock(): void;
   putt(power: number): void;
   play(sound: Sound): void;
   setRoll(speed: number): void;
-  setAmbience(kind: Ambience): void;
   /** Freeze all sound (paused game, hidden tab). */
   suspend(): void;
   resume(): void;
 }
 
-const SILENT: Sfx = { unlock() {}, putt() {}, play() {}, setRoll() {}, setAmbience() {}, suspend() {}, resume() {} };
+const SILENT: Sfx = { unlock() {}, putt() {}, play() {}, setRoll() {}, suspend() {}, resume() {} };
 
 /** The live audio graph, built once on unlock. */
 interface Graph {
@@ -20,13 +20,6 @@ interface Graph {
   readonly master: GainNode;
   readonly noise: AudioBuffer;
   readonly rollGain: GainNode;
-}
-
-interface Crickets {
-  readonly osc: OscillatorNode;
-  readonly gain: GainNode;
-  readonly lfo: OscillatorNode;
-  readonly lfoGain: GainNode;
 }
 
 /** Suspend or resume a context; failures (sync or async) only cost us the pause, so just log them. */
@@ -122,74 +115,17 @@ function playSound(gr: Graph, sound: Sound): void {
   }
 }
 
-function chirp(gr: Graph): void {
-  tone(gr, 'sine', 3200 + Math.random() * 800, 0.03, 0.08, 0, 4200);
-  tone(gr, 'sine', 3400 + Math.random() * 800, 0.025, 0.07, 0.12, 4400);
-}
-
-/** A steady high whine chopped by a square-wave LFO on its gain. */
-function startCrickets({ ac, master }: Graph): Crickets {
-  const osc = ac.createOscillator();
-  const gain = ac.createGain();
-  const lfo = ac.createOscillator();
-  const lfoGain = ac.createGain();
-  osc.frequency.value = 4400;
-  lfo.type = 'square';
-  lfo.frequency.value = 30;
-  lfoGain.gain.value = 0.012;
-  gain.gain.value = 0.012;
-  lfo.connect(lfoGain).connect(gain.gain);
-  osc.connect(gain).connect(master);
-  osc.start();
-  lfo.start();
-  return { osc, gain, lfo, lfoGain };
-}
-
-function stopCrickets(c: Crickets): void {
-  c.osc.stop();
-  c.lfo.stop();
-  c.gain.disconnect();
-  c.lfoGain.disconnect();
-}
-
-/** Owns whichever background loop (bird chirps on a timer, or crickets) is running. */
-function createAmbience(): { start(gr: Graph, kind: Ambience): void; stop(): void } {
-  let timer = 0;
-  let crickets: Crickets | null = null;
-  const stop = () => {
-    window.clearTimeout(timer);
-    if (crickets) stopCrickets(crickets);
-    crickets = null;
-  };
-  const start = (gr: Graph, kind: Ambience) => {
-    stop();
-    if (kind === 'crickets') {
-      crickets = startCrickets(gr);
-      return;
-    }
-    const next = () => {
-      chirp(gr);
-      timer = window.setTimeout(next, 1500 + Math.random() * 2500);
-    };
-    next();
-  };
-  return { start, stop };
-}
-
 export function createSfx(): Sfx {
   const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AC) return SILENT;
   let graph: Graph | null = null;
-  let ambience: Ambience | null = null;
   let rollLevel = 0;
-  const ambient = createAmbience();
 
   return {
     unlock() {
       if (graph) return;
       try {
         graph = buildGraph(AC);
-        if (ambience) ambient.start(graph, ambience);
       } catch (err) {
         console.warn('Audio unavailable:', err);
         graph = null;
@@ -206,11 +142,6 @@ export function createSfx(): Sfx {
       if (!graph || level === rollLevel) return;
       rollLevel = level;
       graph.rollGain.gain.setTargetAtTime(level, graph.ac.currentTime, 0.05);
-    },
-    setAmbience(kind) {
-      if (kind === ambience) return;
-      ambience = kind;
-      if (graph) ambient.start(graph, kind);
     },
     suspend() {
       if (graph) setRunning(graph.ac, false);
