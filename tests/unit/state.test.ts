@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HOLED_SECONDS, INTRO_SECONDS, aimAngle, chargePower, clearEvents, initialState, reduce, update, type GameState,
 } from '../../src/game/state';
-import { STEP } from '../../src/physics/constants';
+import { MAX_SIM_SECONDS, STEP } from '../../src/physics/constants';
 import type { Hole } from '../../src/world/hole';
 import { makeHole } from '../helpers/makeHole';
 
@@ -255,5 +255,23 @@ describe('dt robustness', () => {
     const coarse = update(s, 10 * STEP, HOLES);
     expect(coarse.ball.x).toBeCloseTo(fine.ball.x, 9);
     expect(coarse.ball.vx).toBeCloseTo(fine.ball.vx, 9);
+  });
+});
+
+describe('time limit', () => {
+  it('a shot that times out mid-air rests the ball on the ground where it is', () => {
+    const base = aimingOn();
+    const flying: GameState = {
+      ...base,
+      strokes: [1],
+      phase: { kind: 'rolling', t: MAX_SIM_SECONDS },
+      ball: { ...base.ball, x: 4.2, y: 2.5, z: 3, vx: 0.5, vy: 0, vz: 0, airborne: true },
+    };
+    const s = update(flying, STEP, HOLES);
+    expect(s.phase.kind).toBe('aiming');
+    expect(s.ball.airborne).toBe(false);
+    expect(s.ball.z).toBe(0);
+    expect([s.ball.vx, s.ball.vy, s.ball.vz]).toEqual([0, 0, 0]);
+    expect(s.ball.x).toBeCloseTo(4.2 + 0.5 * STEP);
   });
 });

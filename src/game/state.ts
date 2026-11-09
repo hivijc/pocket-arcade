@@ -161,7 +161,7 @@ function rollStep(s: GameState, t: number, holes: readonly Hole[]): GameState {
     return ready({ ...withStrokes(moved, current(moved) + 1), ball: restingBall(hole, moved.lastRest) }, holes);
   }
   if (r.events.includes('stopped') || !isMoving(r.ball)) return ready(moved, holes);
-  if (t > MAX_SIM_SECONDS) return ready({ ...moved, ball: { ...r.ball, vx: 0, vy: 0, vz: 0, airborne: false } }, holes);
+  if (t > MAX_SIM_SECONDS) return ready({ ...moved, ball: restingBall(hole, [r.ball.x, r.ball.y]) }, holes);
   return moved;
 }
 
