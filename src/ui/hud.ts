@@ -1,3 +1,4 @@
+import titlePanelUrl from '../../assets/ui/title-panel.png';
 import { totalStrokes } from '../game/score';
 import { chargePower, type GameState } from '../game/state';
 import type { Hole } from '../world/hole';
@@ -74,6 +75,8 @@ export function createHud(root: HTMLElement): Hud {
   const hint = el('div', 'hint', 'Mouse: aim · Hold click or Space: power · R: retry (+1) · Esc: menu');
 
   const title = overlay();
+  title.card.classList.add('title-card');
+  title.card.style.backgroundImage = `url(${titlePanelUrl})`;
   title.card.append(el('h1', undefined, 'Backyard'), el('p', undefined, '3 holes of mini-golf'), button('Play', () => cb.onPlay()));
   const menu = overlay();
   menu.card.append(el('h1', undefined, 'Paused'), button('Resume', () => cb.onResume()), button('Restart course', () => cb.onRestart()));
