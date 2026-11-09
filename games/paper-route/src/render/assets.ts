@@ -29,16 +29,36 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Loads every manifest sprite that has an image. A listed image with no file warns and falls back to its placeholder. */
-export async function loadSprites(manifest: Manifest): Promise<Map<string, HTMLImageElement>> {
-  const entries = await Promise.all(Object.entries(manifest).flatMap(([name, def]) => {
-    if (!def.image) return [];
-    const url = spriteUrl(def.image.src);
-    if (!url) {
-      console.warn(`manifest: ${name}.image file assets/sprites/${def.image.src} is missing; drawing its placeholder`);
-      return [];
-    }
-    return [loadImage(url).then((img) => [name, img] as const)];
-  }));
-  return new Map(entries);
+/** Where sprite files come from; injectable so the fallbacks can be tested without a browser. */
+export interface SpriteIo {
+  readonly urlFor: (file: string) => string | undefined;
+  readonly load: (url: string) => Promise<HTMLImageElement>;
+}
+
+const BROWSER_IO: SpriteIo = { urlFor: spriteUrl, load: loadImage };
+
+/** Loads an image, or warns (naming `what`) and resolves null if it cannot be decoded. */
+export async function loadImageOrNull(url: string, what: string, load: SpriteIo['load'] = loadImage): Promise<HTMLImageElement | null> {
+  try {
+    return await load(url);
+  } catch (err) {
+    console.warn(`${what}: ${err instanceof Error ? err.message : String(err)}; drawing its placeholder`);
+    return null;
+  }
+}
+
+async function loadSprite(name: string, file: string, io: SpriteIo): Promise<readonly [string, HTMLImageElement] | null> {
+  const url = io.urlFor(file);
+  if (!url) {
+    console.warn(`manifest: ${name}.image file assets/sprites/${file} is missing; drawing its placeholder`);
+    return null;
+  }
+  const img = await loadImageOrNull(url, `manifest: ${name}.image`, io.load);
+  return img ? ([name, img] as const) : null;
+}
+
+/** Loads every manifest sprite that has an image. A listed image that is missing or will not decode warns and falls back to its placeholder. */
+export async function loadSprites(manifest: Manifest, io: SpriteIo = BROWSER_IO): Promise<Map<string, HTMLImageElement>> {
+  const loaded = await Promise.all(Object.entries(manifest).flatMap(([name, def]) => (def.image ? [loadSprite(name, def.image.src, io)] : [])));
+  return new Map(loaded.flatMap((e) => (e ? [e] : [])));
 }
