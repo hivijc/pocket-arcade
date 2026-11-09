@@ -4,7 +4,7 @@ import { attachInput, type InputEvent } from './core/input';
 import { createStepper, startLoop } from './core/loop';
 import { loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
-import { ambienceFor, soundsFor } from './audio/sfx-math';
+import { ambienceFor, audioTransition, rollSpeedOf, shouldPlayAudio, soundsFor } from './audio/sfx-math';
 import { createSfx } from './audio/sfx';
 import { MAX_PUTT_SPEED, STEP } from './physics/constants';
 import { unproject } from './render/iso';
@@ -63,7 +63,19 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
   document.body.dataset.phase = phase;
 
   const sfx = createSfx();
-  const unlock = () => sfx.unlock();
+  let audioPlaying = true;
+  const syncAudio = () => {
+    const playing = shouldPlayAudio(state.paused, document.hidden);
+    const change = audioTransition(audioPlaying, playing);
+    audioPlaying = playing;
+    if (change === 'suspend') sfx.suspend();
+    else if (change === 'resume') sfx.resume();
+  };
+  document.addEventListener('visibilitychange', syncAudio);
+  const unlock = () => {
+    sfx.unlock();
+    if (!audioPlaying) sfx.suspend();
+  };
   window.addEventListener('pointerdown', unlock, { once: true });
   window.addEventListener('keydown', unlock, { once: true });
   sfx.setAmbience(ambienceFor(phase));
@@ -91,7 +103,8 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
     }
     prevKind = state.phase.kind;
     for (const s of soundsFor(state.events)) sfx.play(s);
-    sfx.setRoll(state.phase.kind === 'rolling' && !state.ball.airborne ? Math.hypot(state.ball.vx, state.ball.vy) : 0);
+    sfx.setRoll(rollSpeedOf(state));
+    syncAudio();
     const h = content.perHole[state.holeIndex];
     const look = PHASES[phase];
     const wind = windStep(time);

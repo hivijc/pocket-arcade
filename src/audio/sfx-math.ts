@@ -1,4 +1,5 @@
 import type { BallEvent } from '../physics/ball';
+import type { GameState } from '../game/state';
 import type { PhaseId } from '../render/time-of-day';
 
 export type Sound = 'wall' | 'land' | 'plink' | 'splash';
@@ -18,3 +19,18 @@ const SOUND_OF: Partial<Record<BallEvent, Sound>> = { wall: 'wall', land: 'land'
 export function soundsFor(events: readonly BallEvent[]): Sound[] {
   return [...new Set(events.flatMap((e) => (SOUND_OF[e] ? [SOUND_OF[e] as Sound] : [])))];
 }
+
+/** Audio runs only while the game is unpaused and the page is visible. */
+export const shouldPlayAudio = (paused: boolean, hidden: boolean): boolean => !paused && !hidden;
+
+/** What the audio context should do when playability flips, or null when it didn't. */
+export function audioTransition(wasPlaying: boolean, nowPlaying: boolean): 'suspend' | 'resume' | null {
+  if (wasPlaying === nowPlaying) return null;
+  return nowPlaying ? 'resume' : 'suspend';
+}
+
+type RollView = Pick<GameState, 'phase' | 'paused'> & { readonly ball: Pick<GameState['ball'], 'vx' | 'vy' | 'airborne'> };
+
+/** Ball speed that drives the rolling hiss: zero unless a grounded ball rolls in an unpaused game. */
+export const rollSpeedOf = (s: RollView): number =>
+  s.phase.kind === 'rolling' && !s.paused && !s.ball.airborne ? Math.hypot(s.ball.vx, s.ball.vy) : 0;

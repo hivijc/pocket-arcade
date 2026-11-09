@@ -7,9 +7,22 @@ export interface Sfx {
   play(sound: Sound): void;
   setRoll(speed: number): void;
   setAmbience(kind: Ambience): void;
+  /** Freeze all sound (paused game, hidden tab). */
+  suspend(): void;
+  resume(): void;
 }
 
-const SILENT: Sfx = { unlock() {}, putt() {}, play() {}, setRoll() {}, setAmbience() {} };
+const SILENT: Sfx = { unlock() {}, putt() {}, play() {}, setRoll() {}, setAmbience() {}, suspend() {}, resume() {} };
+
+/** Suspend or resume a context; failures (sync or async) only cost us the pause, so just log them. */
+function setRunning(ac: AudioContext, running: boolean): void {
+  const warn = (err: unknown) => console.warn(`Audio ${running ? 'resume' : 'suspend'} failed:`, err);
+  try {
+    (running ? ac.resume() : ac.suspend()).catch(warn);
+  } catch (err) {
+    warn(err);
+  }
+}
 
 export function createSfx(): Sfx {
   const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -18,6 +31,7 @@ export function createSfx(): Sfx {
   let master: GainNode | null = null;
   let noise: AudioBuffer | null = null;
   let rollGain: GainNode | null = null;
+  let rollLevel = 0;
   let ambience: Ambience | null = null;
   let ambienceTimer = 0;
   let crickets: { osc: OscillatorNode; gain: GainNode } | null = null;
@@ -138,12 +152,21 @@ export function createSfx(): Sfx {
       }
     },
     setRoll(speed) {
-      if (ac && rollGain) rollGain.gain.setTargetAtTime(rollVolume(speed), ac.currentTime, 0.05);
+      const level = rollVolume(speed);
+      if (!ac || !rollGain || level === rollLevel) return;
+      rollLevel = level;
+      rollGain.gain.setTargetAtTime(level, ac.currentTime, 0.05);
     },
     setAmbience(kind) {
       if (kind === ambience) return;
       ambience = kind;
       if (ac) startAmbience(kind);
+    },
+    suspend() {
+      if (ac) setRunning(ac, false);
+    },
+    resume() {
+      if (ac) setRunning(ac, true);
     },
   };
 }
