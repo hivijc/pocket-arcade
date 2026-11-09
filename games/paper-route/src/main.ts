@@ -42,9 +42,14 @@ function matchPageToCanvas(content: Content, table: Uint8Array): void {
 
 function wireAudio(): Sfx {
   const sfx = createSfx();
-  const unlock = () => sfx.unlock();
-  window.addEventListener('keydown', unlock, { once: true });
-  window.addEventListener('pointerdown', unlock, { once: true });
+  // Stay attached until the context is actually running: the first gesture can leave it suspended.
+  const unlock = () => {
+    if (!sfx.unlock()) return;
+    window.removeEventListener('keydown', unlock);
+    window.removeEventListener('pointerdown', unlock);
+  };
+  window.addEventListener('keydown', unlock);
+  window.addEventListener('pointerdown', unlock);
   return sfx;
 }
 

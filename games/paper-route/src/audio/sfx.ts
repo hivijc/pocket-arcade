@@ -2,8 +2,8 @@ import type { Sound } from './sfx-math';
 
 /** Sound effects only: there is deliberately no background music or ambience. */
 export interface Sfx {
-  /** Call from a user gesture: browsers only allow audio to start after one. */
-  unlock(): void;
+  /** Call from a user gesture: browsers only allow audio to start after one. Returns true once the context is running. */
+  unlock(): boolean;
   play(sound: Sound): void;
 }
 
@@ -13,7 +13,7 @@ interface Graph {
   readonly noise: AudioBuffer;
 }
 
-const SILENT: Sfx = { unlock() {}, play() {} };
+const SILENT: Sfx = { unlock: () => true, play() {} };
 
 function noiseBuffer(ac: AudioContext): AudioBuffer {
   const buf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
@@ -67,13 +67,20 @@ const RECIPES: Readonly<Record<Sound, (g: Graph) => void>> = {
   fanfare: (g) => [523, 659, 784, 1047].forEach((f, i) => tone(g, f, 0.25, 'triangle', 0.2, i * 0.12)),
 };
 
+/** Browsers can leave a context suspended after creation; ask it to run. Returns true when it already is. */
+function resumeIfSuspended(g: Graph): boolean {
+  if (g.ac.state === 'running') return true;
+  if (g.ac.state === 'suspended') void g.ac.resume().catch(() => undefined);
+  return false;
+}
+
 export function createSfx(): Sfx {
   const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AC) return SILENT;
   let graph: Graph | null = null;
   return {
     unlock() {
-      if (graph) return;
+      if (graph) return resumeIfSuspended(graph);
       try {
         const ac = new AC();
         const master = ac.createGain();
@@ -82,10 +89,13 @@ export function createSfx(): Sfx {
         graph = { ac, master, noise: noiseBuffer(ac) };
       } catch (err) {
         console.warn('Audio is unavailable:', err);
+        return true; // nothing to retry
       }
+      return resumeIfSuspended(graph);
     },
     play(sound) {
       if (!graph) return;
+      resumeIfSuspended(graph);
       try {
         RECIPES[sound](graph);
       } catch (err) {

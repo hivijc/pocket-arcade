@@ -42,11 +42,21 @@ function row(table: HTMLElement, label: string): HTMLElement {
   return el('td', '', tr);
 }
 
+const subscriberCounts = new WeakMap<Street, number>(); // a cache keyed by street: mutated on purpose
+
+function subscribersOf(street: Street): number {
+  const hit = subscriberCounts.get(street);
+  if (hit !== undefined) return hit;
+  const n = street.lots.filter((l) => l.subscriber).length;
+  subscriberCounts.set(street, n);
+  return n;
+}
+
 export function createHud(root: HTMLElement): Hud {
   const bar = el('div', 'bar', root);
   const stats = { score: stat(bar, 'score'), papers: stat(bar, 'papers'), delivered: stat(bar, 'delivered'), helmets: stat(bar, 'helmets') };
   const popup = el('div', 'popup', root);
-  el('div', 'hint', root, 'A/D steer · W/S speed · J/K toss left/right · Esc pause');
+  el('div', 'hint', root, 'A/D steer · W/S speed · J/Q toss left · K/E toss right · Esc pause');
 
   const [title, titleCard] = overlay(root, 'title');
   el('h1', '', titleCard, 'Paper Route');
@@ -63,7 +73,7 @@ export function createHud(root: HTMLElement): Hud {
   const endHeading = el('h1', '', endCard);
   const table = el('table', '', endCard);
   const cells = { delivered: row(table, 'Deliveries'), accuracy: row(table, 'Accuracy'), score: row(table, 'Score'), best: row(table, 'Best') };
-  el('p', 'cta', endCard, 'Press Enter to ride again');
+  el('p', 'cta', endCard, 'Press R or Enter to ride again');
 
   const [error, errorCard] = overlay(root, 'error');
   const errorText = el('p', '', errorCard);
@@ -71,7 +81,7 @@ export function createHud(root: HTMLElement): Hud {
 
   return {
     update(s, street, best, time) {
-      const subs = street.lots.filter((l) => l.subscriber).length;
+      const subs = subscribersOf(street);
       setText(stats.score, String(s.score));
       setText(stats.papers, String(s.papers));
       setText(stats.delivered, `${s.delivered}/${subs}`);
@@ -96,6 +106,7 @@ export function createHud(root: HTMLElement): Hud {
       }
     },
     showError(message) {
+      for (const o of [title, pause, end]) o.classList.remove('on');
       errorText.textContent = message;
       error.classList.add('on');
     },
