@@ -24,7 +24,7 @@ Inspiration only: no code, art, or assets are copied from iso-hoops. The game, i
 
 ## 3. Platform and stack
 
-- Desktop web browsers only (mouse + keyboard).
+- Desktop web browsers (mouse + keyboard), plus phones and tablets by touch (added later; see "Touch controls" below).
 - TypeScript, Canvas 2D, no game framework.
 - Vite (dev server and build), Vitest (unit tests), Playwright (one end-to-end test).
 
@@ -229,3 +229,11 @@ Budget: ~80–150 generations, including retries.
 - All 3 holes playable start to finish; scorecard shown; best total saved.
 - PixelLab golfer and props integrated; palette unified; time of day and sound working.
 - All tests pass; coverage target met; `npm run build` output runs from a static host.
+
+## Touch controls (added 2026-11-10)
+
+- **Slingshot:** touch or pen pointers (`pointerType`) drag anywhere on the stage. The shot aims opposite the drag on screen. Power runs from 0 at a 14 CSS-px dead zone to 1 at 150 CSS px (`src/game/drag.ts`, `dragShot`). Releasing putts. Dragging back inside the dead zone cancels, with no stroke.
+- **State:** a `dragging` phase (`{ kind: 'dragging', power }`) and a `drag` action set the aim and power. `release` putts from `dragging` just as it does from `charging`, and `cancel` and pause drop the drag. The mouse keeps hover-aim and hold-to-charge.
+- **Feedback:** the aim dots stay. An orange pull band behind the ball grows with power, the power bar follows the drag, and the golfer's backswing frame tracks the power.
+- **Layout:** on coarse-pointer devices below 2× the canvas uses a fractional scale to fill the limiting side (`src/ui/layout.ts`). On-screen Retry and Pause buttons appear only for `(pointer: coarse)`. The stage sets `touch-action: none` and `user-select: none`, the page sets `overscroll-behavior: none`, and the viewport meta disables user zoom.
+- **Audio:** the graph is built on the first press and resumed on the first event browsers count as user activation (a touch `pointerup`/`touchend`, not `pointerdown`).

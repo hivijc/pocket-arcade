@@ -39,11 +39,14 @@ export const BACKGROUND = '#2c2c3a';
 
 const COLORS = {
   bg: BACKGROUND, ball: '#fffaf0', cup: '#14141c', shadow: 'rgba(20,20,28,0.35)',
-  pole: '#efe6d2', flag: '#c8463c', aim: '#fffaf0', aimShadow: 'rgba(20,20,28,0.6)',
+  pole: '#efe6d2', flag: '#c8463c', aim: '#fffaf0', aimShadow: 'rgba(20,20,28,0.6)', pull: '#f0a64a',
   shirt: '#2f6f9a', legs: '#4a3b2e', skin: '#e7b98f', propSide: 'rgba(20,20,28,0.25)',
 } as const;
 const AIM_DOTS = 6;
 const AIM_SPACING = 0.3;
+/** Slingshot pull band behind the ball at full power. */
+const PULL_DOTS = 7;
+const PULL_SPACING = 0.28;
 
 function rect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string): void {
   ctx.fillStyle = color;
@@ -188,9 +191,24 @@ function drawCup(ctx: CanvasRenderingContext2D, f: Frame): void {
   ctx.fill();
 }
 
+/** Touch slingshot: a band of dots pulled back behind the ball, longer with more power. */
+function drawPull(ctx: CanvasRenderingContext2D, f: Frame): void {
+  const p = f.state.phase;
+  if (p.kind !== 'dragging') return;
+  const b = f.state.ball;
+  const aim = f.state.aim;
+  const dots = Math.max(1, Math.round(p.power * PULL_DOTS));
+  for (let i = 1; i <= dots; i++) {
+    const d = i * PULL_SPACING;
+    const [sx, sy] = ground(f, b.x - Math.cos(aim) * d, b.y - Math.sin(aim) * d);
+    rect(ctx, sx - 1, sy, 2, 2, COLORS.aimShadow);
+    rect(ctx, sx - 1, sy - 1, 2, 2, COLORS.pull);
+  }
+}
+
 function drawAim(ctx: CanvasRenderingContext2D, f: Frame): void {
   const k = f.state.phase.kind;
-  if (k !== 'aiming' && k !== 'charging') return;
+  if (k !== 'aiming' && k !== 'charging' && k !== 'dragging') return;
   const b = f.state.ball;
   const aim = aimAngle(f.state);
   for (let i = 1; i <= AIM_DOTS; i++) {
@@ -210,5 +228,6 @@ export function renderFrame(ctx: CanvasRenderingContext2D, f: Frame): void {
   drawTrail(ctx, f);
   for (const d of sortByDepth([...walls(f), ...props(f), flag(f), ...ball(f), ...golfer(f)])) d.draw(ctx);
   drawEffects(ctx, f);
+  drawPull(ctx, f);
   drawAim(ctx, f);
 }

@@ -8,6 +8,10 @@ export interface HudCallbacks {
   onPlay(): void;
   onResume(): void;
   onRestart(): void;
+  /** On-screen Retry (touch devices). */
+  onRetry(): void;
+  /** On-screen Pause (touch devices). */
+  onPause(): void;
 }
 
 export interface Hud {
@@ -45,6 +49,25 @@ function button(label: string, onClick: () => void): HTMLButtonElement {
   return b;
 }
 
+/** 0..1 power while charging (ping-pong meter) or dragging (slingshot), else null. */
+function powerOf(p: GameState['phase']): number | null {
+  if (p.kind === 'charging') return chargePower(p.t);
+  if (p.kind === 'dragging') return p.power;
+  return null;
+}
+
+const MOUSE_HINT = 'Mouse: aim · Hold click or Space: power · R: retry (+1) · Esc: menu';
+const TOUCH_HINT = 'Drag back to aim and set power · Release to putt · Drag back in to cancel';
+
+function touchControls(cb: () => HudCallbacks): HTMLDivElement {
+  const box = el('div', 'touch-controls');
+  const retry = button('Retry', () => cb().onRetry());
+  retry.setAttribute('aria-label', 'Retry from the tee (+1 stroke)');
+  const pause = button('Pause', () => cb().onPause());
+  box.append(retry, pause);
+  return box;
+}
+
 function row(cells: readonly string[], tag: 'td' | 'th', order?: number): HTMLTableRowElement {
   const r = el('tr');
   r.append(...cells.map((c) => el(tag, undefined, c)));
@@ -75,8 +98,9 @@ function pop(popup: HTMLElement, big: boolean): void {
   popup.classList.toggle('big', big);
 }
 
-export function createHud(root: HTMLElement): Hud {
-  let cb: HudCallbacks = { onPlay: () => {}, onResume: () => {}, onRestart: () => {} };
+export function createHud(root: HTMLElement, touch = false): Hud {
+  const noop = () => {};
+  let cb: HudCallbacks = { onPlay: noop, onResume: noop, onRestart: noop, onRetry: noop, onPause: noop };
   const hole = stat('Hole', 'hole');
   const par = stat('Par', 'par');
   const strokes = stat('Strokes', 'strokes');
@@ -89,7 +113,8 @@ export function createHud(root: HTMLElement): Hud {
 
   const popup = el('div', 'popup');
   popup.dataset.testid = 'popup';
-  const hint = el('div', 'hint', 'Mouse: aim · Hold click or Space: power · R: retry (+1) · Esc: menu');
+  const hint = el('div', 'hint', touch ? TOUCH_HINT : MOUSE_HINT);
+  const controls = touchControls(() => cb);
 
   const title = overlay();
   title.card.classList.add('title-card');
@@ -106,7 +131,8 @@ export function createHud(root: HTMLElement): Hud {
   const errorText = el('p');
   error.card.append(errorText);
 
-  root.append(bar, power, popup, hint, title.root, menu.root, score.root, error.root);
+  root.classList.toggle('touch', touch);
+  root.append(bar, power, popup, hint, ...(touch ? [controls] : []), title.root, menu.root, score.root, error.root);
   let shownScorecard = '';
   let shownPopup = '';
 
@@ -119,8 +145,10 @@ export function createHud(root: HTMLElement): Hud {
       hole.value.textContent = `${state.holeIndex + 1} · ${h.name}`;
       par.value.textContent = String(h.par);
       strokes.value.textContent = String(state.strokes[state.holeIndex] ?? 0);
-      power.classList.toggle('on', p.kind === 'charging');
-      fill.style.width = p.kind === 'charging' ? `${Math.round(chargePower(p.t) * 100)}%` : '0';
+      const pw = powerOf(p);
+      power.classList.toggle('on', pw !== null);
+      fill.style.width = pw === null ? '0' : `${Math.round(pw * 100)}%`;
+      controls.classList.toggle('on', p.kind === 'aiming' || p.kind === 'dragging' || p.kind === 'charging' || p.kind === 'rolling');
       const message = p.kind === 'holed' ? p.label : p.kind === 'intro' ? `${h.name} · Par ${h.par}` : '';
       const popupKey = `${state.holeIndex}|${p.kind}|${message}`;
       if (popupKey !== shownPopup) {

@@ -1,13 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { SOLUTIONS } from '../fixtures/solutions';
-
-interface Hook {
-  getState(): { phase: { kind: string }; strokes: number[] };
-  putt(angle: number, power: number): void;
-}
-declare global {
-  interface Window { __minigolf: Hook }
-}
+import './hook';
 
 test('hole 1 can be played into the cup', async ({ page }) => {
   await page.goto('/');
@@ -61,4 +54,11 @@ test('shows the title card with no console errors', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Backyard' })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('desktop shows no touch buttons and keeps whole-pixel scaling', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Pause' })).toHaveCount(0);
+  const width = await page.locator('#game').evaluate((c) => parseFloat((c as HTMLElement).style.width));
+  expect(width % 360).toBe(0);
 });

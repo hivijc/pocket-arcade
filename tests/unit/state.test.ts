@@ -187,6 +187,73 @@ describe('pause and cancel', () => {
   });
 });
 
+describe('dragging (touch slingshot)', () => {
+  const dragging = (angle = 0, power = 0.45) => reduce(aimingOn(), { type: 'drag', angle, power }, HOLES);
+
+  it('drag from aiming previews the shot without striking', () => {
+    const s = dragging(0.3, 0.6);
+    expect(s.phase).toEqual({ kind: 'dragging', power: 0.6 });
+    expect(s.aim).toBe(0.3);
+    expect(s.aimPoint).toBeNull();
+    expect(aimAngle(s)).toBe(0.3);
+    expect(s.strokes[0]).toBe(0);
+  });
+
+  it('further drags update the preview', () => {
+    const s = reduce(dragging(0.3, 0.6), { type: 'drag', angle: -1, power: 0.2 }, HOLES);
+    expect(s.phase).toEqual({ kind: 'dragging', power: 0.2 });
+    expect(s.aim).toBe(-1);
+  });
+
+  it('power is clamped to 0..1', () => {
+    expect(dragging(0, 4).phase).toEqual({ kind: 'dragging', power: 1 });
+    expect(dragging(0, -2).phase).toEqual({ kind: 'dragging', power: 0 });
+  });
+
+  it('release putts with the dragged angle and power', () => {
+    const rolling = reduce(dragging(SINK.angle, SINK.power), { type: 'release' }, HOLES);
+    expect(rolling.phase.kind).toBe('rolling');
+    expect(rolling.strokes[0]).toBe(1);
+    expect(rolling.ball.vx).toBeGreaterThan(0);
+    expect(runUntil(rolling, kind('holed')).phase.kind).toBe('holed');
+  });
+
+  it('cancel drops the drag back to aiming with no stroke', () => {
+    const s = reduce(dragging(), { type: 'cancel' }, HOLES);
+    expect(s.phase.kind).toBe('aiming');
+    expect(s.strokes[0]).toBe(0);
+  });
+
+  it('pausing mid-drag drops it', () => {
+    const s = reduce(dragging(), { type: 'togglePause' }, HOLES);
+    expect(s.paused).toBe(true);
+    expect(s.phase.kind).toBe('aiming');
+  });
+
+  it('drag is ignored outside aiming and dragging', () => {
+    const rolling = reduce(aimingOn(), { type: 'putt', angle: 0, power: 0.5 }, HOLES);
+    expect(reduce(rolling, { type: 'drag', angle: 1, power: 1 }, HOLES)).toBe(rolling);
+    const charging = reduce(aimingOn(), { type: 'press' }, HOLES);
+    expect(reduce(charging, { type: 'drag', angle: 1, power: 1 }, HOLES)).toBe(charging);
+  });
+
+  it('retry works mid-drag', () => {
+    const s = reduce(dragging(), { type: 'retry' }, HOLES);
+    expect(s.phase.kind).toBe('aiming');
+    expect(s.strokes[0]).toBe(1);
+  });
+
+  it('update leaves a drag as it is', () => {
+    const s = dragging();
+    expect(update(s, STEP, HOLES)).toBe(s);
+  });
+
+  it('aimAt during a drag does not override the dragged aim', () => {
+    const s = reduce(dragging(0.3), { type: 'aimAt', point: [9, 9] }, HOLES);
+    expect(aimAngle(s)).toBe(0.3);
+  });
+});
+
 describe('events', () => {
   it('accumulate across updates until cleared', () => {
     const walled: Hole[] = [makeHole({ width: 4, cup: [1.5, 0.5] })];

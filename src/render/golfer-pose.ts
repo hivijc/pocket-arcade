@@ -44,12 +44,13 @@ const loop = (t: number, a: AnimLayout): number => Math.floor(t * a.fps) % a.fra
 
 export function golferPose(s: GameState, hole: Hole, anims: GolferLayout['anims'], time: number): GolferPose | null {
   const p = s.phase;
-  if (p.kind === 'aiming' || p.kind === 'charging') {
+  if (p.kind === 'aiming' || p.kind === 'charging' || p.kind === 'dragging') {
     const aim = aimAngle(s);
     const at = stance(hole, [s.ball.x, s.ball.y], aim);
     const facing = screenDir(aim);
     if (p.kind === 'aiming') return { anim: 'idle', frame: loop(time, anims.idle), facing, at };
-    return { anim: 'backswing', frame: Math.round(chargePower(p.t) * (anims.backswing.frames - 1)), facing, at };
+    const power = p.kind === 'charging' ? chargePower(p.t) : p.power;
+    return { anim: 'backswing', frame: Math.round(power * (anims.backswing.frames - 1)), facing, at };
   }
   const at = stance(hole, s.lastRest, s.aim);
   const facing = screenDir(s.aim);
