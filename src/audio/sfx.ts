@@ -34,7 +34,7 @@ export function createSfx(): Sfx {
   let rollLevel = 0;
   let ambience: Ambience | null = null;
   let ambienceTimer = 0;
-  let crickets: { osc: OscillatorNode; gain: GainNode } | null = null;
+  let crickets: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode; lfoGain: GainNode } | null = null;
 
   const env = (g: GainNode, t: number, peak: number, attack: number, decay: number) => {
     g.gain.setValueAtTime(0.0001, t);
@@ -77,7 +77,12 @@ export function createSfx(): Sfx {
 
   const stopAmbience = () => {
     window.clearTimeout(ambienceTimer);
-    crickets?.osc.stop();
+    if (crickets) {
+      crickets.osc.stop();
+      crickets.lfo.stop();
+      crickets.gain.disconnect();
+      crickets.lfoGain.disconnect();
+    }
     crickets = null;
   };
 
@@ -104,7 +109,7 @@ export function createSfx(): Sfx {
       osc.connect(gain).connect(master);
       osc.start();
       lfo.start();
-      crickets = { osc, gain };
+      crickets = { osc, gain, lfo, lfoGain };
     }
   };
 
