@@ -1,7 +1,64 @@
 {
-  "gnome": { "footprint": { "kind": "circle", "r": 0.3 }, "placeholder": { "color": "#c8463c", "w": 6, "h": 10 } },
-  "big-gnome": { "footprint": { "kind": "circle", "r": 0.5 }, "placeholder": { "color": "#c8463c", "w": 12, "h": 18 } },
-  "flowerpot": { "footprint": { "kind": "circle", "r": 0.2 }, "placeholder": { "color": "#b5653a", "w": 6, "h": 6 } },
-  "bush": { "footprint": { "kind": "circle", "r": 0.4 }, "placeholder": { "color": "#3f6b3a", "w": 14, "h": 12 } },
-  "lamp": { "footprint": { "kind": "circle", "r": 0.1 }, "placeholder": { "color": "#4a4a52", "w": 2, "h": 26 } }
+  "gnome": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.3
+    },
+    "placeholder": {
+      "color": "#c8463c",
+      "w": 6,
+      "h": 10
+    },
+    "image": {
+      "src": "gnome.png",
+      "anchor": [
+        8,
+        29
+      ]
+    }
+  },
+  "big-gnome": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.5
+    },
+    "placeholder": {
+      "color": "#c8463c",
+      "w": 12,
+      "h": 18
+    }
+  },
+  "flowerpot": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.2
+    },
+    "placeholder": {
+      "color": "#b5653a",
+      "w": 6,
+      "h": 6
+    }
+  },
+  "bush": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.4
+    },
+    "placeholder": {
+      "color": "#3f6b3a",
+      "w": 14,
+      "h": 12
+    }
+  },
+  "lamp": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.1
+    },
+    "placeholder": {
+      "color": "#4a4a52",
+      "w": 2,
+      "h": 26
+    }
+  }
 }
