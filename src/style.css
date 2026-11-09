@@ -49,3 +49,11 @@ td, th { padding: 4px 12px; text-align: left; }
 }
 .card.title-card h1 { color: var(--ink); text-shadow: 0 2px 0 #0008; }
 .card.title-card p { color: var(--ink); text-shadow: 0 2px 0 #000a, 0 0 4px #000a; font-weight: bold; }
+.picker { display: flex; gap: 8px; justify-content: center; margin: 4px 0 6px; }
+.picker .course {
+  display: grid; gap: 2px; min-width: 120px; padding: 6px 12px; margin: 0;
+  background: var(--panel); color: var(--ink); border: 2px solid transparent;
+}
+.picker .course[aria-pressed="true"] { border-color: var(--accent); background: var(--bg); }
+.picker .course b { color: var(--accent); }
+.picker .course small { font-size: 10px; color: var(--muted); letter-spacing: .06em; }

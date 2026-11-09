@@ -14,10 +14,13 @@ export function bakeToCanvases(bake: TerrainBake): HTMLCanvasElement[] {
   });
 }
 
-const SPRITE_URLS = import.meta.glob('../../assets/sprites/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const SPRITE_URLS = import.meta.glob(['../../assets/sprites/*.png', '../../assets/courses/*/sprites/*.png'], {
+  eager: true, query: '?url', import: 'default',
+}) as Record<string, string>;
 
-export function spriteUrl(file: string): string | undefined {
-  return SPRITE_URLS[`../../assets/sprites/${file}`];
+/** URL of `file` inside `dir` (a folder under assets/, e.g. 'sprites' or 'courses/boardwalk/sprites'). */
+export function spriteUrl(file: string, dir = 'sprites'): string | undefined {
+  return SPRITE_URLS[`../../assets/${dir}/${file}`];
 }
 
 export function loadImage(url: string): Promise<HTMLImageElement> {
@@ -30,11 +33,11 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 /** Loads every manifest sprite that has an image. A listed image with no file is an error. */
-export async function loadSprites(manifest: Manifest): Promise<Map<string, HTMLImageElement>> {
+export async function loadSprites(manifest: Manifest, dir = 'sprites'): Promise<Map<string, HTMLImageElement>> {
   const entries = await Promise.all(Object.entries(manifest).flatMap(([name, def]) => {
     if (!def.image) return [];
-    const url = spriteUrl(def.image.src);
-    if (!url) throw new Error(`manifest: ${name}.image file assets/sprites/${def.image.src} is missing`);
+    const url = spriteUrl(def.image.src, dir);
+    if (!url) throw new Error(`manifest: ${name}.image file assets/${dir}/${def.image.src} is missing`);
     return [loadImage(url).then((img) => [name, img] as const)];
   }));
   return new Map(entries);

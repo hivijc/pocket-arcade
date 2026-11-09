@@ -1,7 +1,7 @@
 import type { Vec2 } from '../core/geometry';
 import { heightAt } from '../physics/terrain';
 import type { Hole, Surface } from '../world/hole';
-import { classifyWall, picketPixels } from './fences';
+import { FENCE_COLORS, classifyWall, picketPixels, type FenceColors } from './fences';
 import { project, unproject, type View } from './iso';
 import { parseHex, type RGB } from './palette';
 
@@ -13,22 +13,62 @@ const BASE_Z = -0.5;
 const FRINGE_RADIUS = 4;
 const RIM_WIDTH = 2;
 
-type Kind = 'G' | 'R' | 'S' | 'W' | 'sideL' | 'sideR';
-const KINDS: readonly Kind[] = ['G', 'R', 'S', 'W', 'sideL', 'sideR'];
-const TOP_KINDS = new Set([0, 1, 2]); // G, R, S: where the fringe grows from
+type Kind = 'G' | 'R' | 'S' | 'W' | 'sideL' | 'sideR' | 'P';
+// New kinds go on the end: the index is only internal, but keeping old ones fixed keeps diffs obvious.
+const KINDS: readonly Kind[] = ['G', 'R', 'S', 'W', 'sideL', 'sideR', 'P'];
 const WATER = 3;
+const PLANK = 6;
+const TOP_KINDS = new Set([0, 1, 2, PLANK]); // G, R, S, P: where the fringe grows from
+/** Planks across a boardwalk, per tile, and the share of each plank that is a dark seam. */
+const PLANKS_PER_TILE = 4;
+const SEAM = 0.16;
 
-const hexes = (...h: string[]): RGB[] => h.map(parseHex);
-export const RAMPS: Readonly<Record<Kind | 'fringe' | 'rim', readonly RGB[]>> = {
-  G: hexes('#3f6b3a', '#4f8a4c', '#6fae5c', '#8fca6c', '#b5e08a'),
-  R: hexes('#1f3a2c', '#2f5530', '#3f6b3a', '#5e8c45', '#8db35a'),
-  S: hexes('#8a6a4a', '#b08a62', '#d9c08c', '#efe6d2'),
-  W: hexes('#1d3b5c', '#2f6f9a', '#5aa7d0', '#9fd8ee'),
-  sideL: hexes('#2e2420', '#4a3b2e', '#6b4f3a'),
-  sideR: hexes('#14141c', '#2e2420', '#4a3b2e'),
-  fringe: hexes('#1f3a2c', '#2f5530', '#3f6b3a', '#5e8c45'),
-  rim: hexes('#c8463c', '#fffaf0'),
-};
+export type RampName = Kind | 'fringe' | 'rim';
+export type Ramps = Readonly<Record<RampName, readonly RGB[]>>;
+
+/** How a course's terrain is coloured: its ramps, its pool-rim look and its fence colours. */
+export interface TerrainStyle {
+  readonly ramps: Ramps;
+  /** 'stripe' = the striped kiddie-pool rim; 'speckle' = a scattered sandy edge. */
+  readonly rim: 'stripe' | 'speckle';
+  readonly fence: FenceColors;
+}
+
+/** A terrain style as plain data (hex strings), the way a course folder stores it. */
+export interface TerrainStyleDef {
+  readonly ramps: Readonly<Record<RampName, readonly string[]>>;
+  readonly rim: 'stripe' | 'speckle';
+  readonly fence: FenceColors;
+}
+
+const RAMP_NAMES: readonly RampName[] = [...KINDS, 'fringe', 'rim'];
+
+export function parseTerrainStyle(def: TerrainStyleDef): TerrainStyle {
+  const ramps = Object.fromEntries(RAMP_NAMES.map((k) => {
+    const hexList = def.ramps[k];
+    if (!Array.isArray(hexList) || hexList.length < 1) throw new Error(`terrain style: ramp "${k}" needs at least one colour`);
+    return [k, hexList.map(parseHex)];
+  })) as Record<RampName, RGB[]>;
+  return { ramps, rim: def.rim, fence: def.fence };
+}
+
+export const BACKYARD_TERRAIN: TerrainStyle = parseTerrainStyle({
+  ramps: {
+    G: ['#3f6b3a', '#4f8a4c', '#6fae5c', '#8fca6c', '#b5e08a'],
+    R: ['#1f3a2c', '#2f5530', '#3f6b3a', '#5e8c45', '#8db35a'],
+    S: ['#8a6a4a', '#b08a62', '#d9c08c', '#efe6d2'],
+    W: ['#1d3b5c', '#2f6f9a', '#5aa7d0', '#9fd8ee'],
+    sideL: ['#2e2420', '#4a3b2e', '#6b4f3a'],
+    sideR: ['#14141c', '#2e2420', '#4a3b2e'],
+    P: ['#4a3b2e', '#6b4f3a', '#8a6a4a', '#b08a62'],
+    fringe: ['#1f3a2c', '#2f5530', '#3f6b3a', '#5e8c45'],
+    rim: ['#c8463c', '#fffaf0'],
+  },
+  rim: 'stripe',
+  fence: FENCE_COLORS,
+});
+/** Backyard's ramps (the default style). */
+export const RAMPS: Ramps = BACKYARD_TERRAIN.ramps;
 
 export interface TerrainBake {
   readonly width: number;
@@ -45,6 +85,8 @@ interface Buffers {
   readonly kind: Int8Array;
   readonly shade: Float32Array;
   readonly ground: Float32Array;
+  /** Position along a boardwalk's run, in tiles, for plank pixels (else 0). */
+  readonly grain: Float32Array;
 }
 
 export const bayer = (x: number, y: number): number => (BAYER4[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
@@ -99,7 +141,9 @@ function polyArea(pts: readonly Vec2[]): number {
   return Math.abs(a) / 2;
 }
 
-function fillPoly(buf: Buffers, pts: readonly Vec2[], kind: number, shade: number, groundAt: ((x: number, y: number) => number) | null): void {
+type PixelFn = (x: number, y: number) => number;
+
+function fillPoly(buf: Buffers, pts: readonly Vec2[], kind: number, shade: number, groundAt: PixelFn | null, grainAt: PixelFn | null = null): void {
   if (polyArea(pts) < 0.5) return; // degenerate: nothing to draw
   const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
   const x0 = Math.max(0, Math.floor(Math.min(...xs))), x1 = Math.min(buf.w - 1, Math.ceil(Math.max(...xs)));
@@ -111,6 +155,7 @@ function fillPoly(buf: Buffers, pts: readonly Vec2[], kind: number, shade: numbe
       buf.kind[i] = kind;
       buf.shade[i] = shade;
       buf.ground[i] = groundAt ? groundAt(x + 0.5, y + 0.5) : Number.NaN;
+      if (grainAt) buf.grain[i] = grainAt(x + 0.5, y + 0.5);
     }
   }
 }
@@ -132,7 +177,7 @@ function bakeCell(buf: Buffers, hole: Hole, view: View, x: number, y: number): v
     return heightAt(hole, gx, gy);
   };
   const top = [project(view, x, y, h00), project(view, x + 1, y, h10), project(view, x + 1, y + 1, h11), project(view, x, y + 1, h01)];
-  fillPoly(buf, top, KINDS.indexOf(surface), shade, groundAt);
+  fillPoly(buf, top, KINDS.indexOf(surface as Kind), shade, groundAt, surface === 'P' ? plankGrain(hole, view, x, y, meanZ) : null);
 
   // This cell's own front-facing earth sides, drawn right after its top so nearer cells paint over them.
   const solid = (cx: number, cy: number) => cx >= hole.width || cy >= hole.depth || hole.surface[cy][cx] === 'X';
@@ -142,6 +187,12 @@ function bakeCell(buf: Buffers, hole: Hole, view: View, x: number, y: number): v
   if (solid(x + 1, y)) {
     fillPoly(buf, [project(view, x + 1, y, h10), project(view, x + 1, y + 1, h11), project(view, x + 1, y + 1, BASE_Z), project(view, x + 1, y, BASE_Z)], KINDS.indexOf('sideR'), 0.5, null);
   }
+}
+
+/** Planks lie across a boardwalk: along x when the walk runs along x (a plank neighbour left or right), else along y. */
+function plankGrain(hole: Hole, view: View, x: number, y: number, z: number): PixelFn {
+  const alongX = hole.surface[y][x - 1] === 'P' || hole.surface[y][x + 1] === 'P';
+  return (sx, sy) => unproject(view, sx, sy, z)[alongX ? 0 : 1];
 }
 
 /** Distance (pixels) from each empty pixel to the nearest grass/sand top pixel, 0 if farther than the fringe radius. */
@@ -186,34 +237,51 @@ function put(out: Uint8ClampedArray, i: number, c: RGB): void {
   out[i * 4 + 3] = 255;
 }
 
-function colorize(buf: Buffers, fringe: Float32Array, frame: number): Uint8ClampedArray {
+function plankColor(buf: Buffers, ramp: readonly RGB[], i: number, x: number, y: number): RGB {
+  const u = buf.grain[i] * PLANKS_PER_TILE;
+  const plank = Math.floor(u);
+  if (u - plank < SEAM) return ramp[0];
+  const tone = (hash2(plank, 0, 23) - 0.5) * 0.35 + (valueNoise(x, y, 3, 29) - 0.5) * 0.2;
+  return ramp[1 + rampLevel(buf.shade[i] + tone, ramp.length - 1, x, y)];
+}
+
+function rimColor(style: TerrainStyle, x: number, y: number): RGB {
+  const rim = style.ramps.rim;
+  if (style.rim === 'stripe') return rim[((x + y) >> 2) & 1];
+  return rim[Math.min(rim.length - 1, Math.floor(hash2(x, y, 31) * rim.length))];
+}
+
+function colorize(buf: Buffers, fringe: Float32Array, frame: number, style: TerrainStyle): Uint8ClampedArray {
   const out = new Uint8ClampedArray(buf.w * buf.h * 4);
+  const ramps = style.ramps;
   for (let y = 0; y < buf.h; y++) {
     for (let x = 0; x < buf.w; x++) {
       const i = y * buf.w + x;
       const k = buf.kind[i];
       if (k === WATER && onRim(buf, x, y)) {
-        put(out, i, RAMPS.rim[((x + y) >> 2) & 1]);
+        put(out, i, rimColor(style, x, y));
+      } else if (k === PLANK) {
+        put(out, i, plankColor(buf, ramps.P, i, x, y));
       } else if (k >= 0) {
-        const ramp = RAMPS[KINDS[k]];
+        const ramp = ramps[KINDS[k]];
         const water = k === WATER;
         const noise = valueNoise(x, y, water ? 5 : 7, water ? 3 + frame * 17 : 3) - 0.5;
         put(out, i, ramp[rampLevel(buf.shade[i] + noise * (water ? 0.5 : 0.3), ramp.length, x, y)]);
       } else if (fringe[i] > 0) {
         const p = 1 - fringe[i] / (FRINGE_RADIUS + 1);
         const sway = frame === 1 && hash2(x, y, 5) < 0.35 ? 1 : 0;
-        if (hash2(x - sway, y, 11) < p * 0.85) put(out, i, RAMPS.fringe[rampLevel(p, RAMPS.fringe.length, x, y)]);
+        if (hash2(x - sway, y, 11) < p * 0.85) put(out, i, ramps.fringe[rampLevel(p, ramps.fringe.length, x, y)]);
       }
     }
   }
   return out;
 }
 
-function plotFences(frames: readonly Uint8ClampedArray[], hole: Hole, view: View, width: number, height: number): void {
+function plotFences(frames: readonly Uint8ClampedArray[], hole: Hole, view: View, width: number, height: number, fence: FenceColors): void {
   const colors = new Map<string, RGB>();
   for (const seg of hole.walls) {
     if (classifyWall(hole, seg) !== 'back') continue;
-    for (const p of picketPixels(hole, view, seg)) {
+    for (const p of picketPixels(hole, view, seg, fence)) {
       if (p.x < 0 || p.y < 0 || p.x >= width || p.y >= height) continue;
       const c = colors.get(p.color) ?? parseHex(p.color);
       colors.set(p.color, c);
@@ -222,13 +290,14 @@ function plotFences(frames: readonly Uint8ClampedArray[], hole: Hole, view: View
   }
 }
 
-export function bakeTerrain(hole: Hole, view: View, width: number, height: number): TerrainBake {
+export function bakeTerrain(hole: Hole, view: View, width: number, height: number, style: TerrainStyle = BACKYARD_TERRAIN): TerrainBake {
   const n = width * height;
   const buf: Buffers = {
     w: width, h: height,
     kind: new Int8Array(n).fill(-1),
     shade: new Float32Array(n),
     ground: new Float32Array(n).fill(Number.NaN),
+    grain: new Float32Array(n),
   };
   for (let s = 0; s <= hole.width + hole.depth - 2; s++) {
     for (let y = 0; y < hole.depth; y++) {
@@ -237,7 +306,7 @@ export function bakeTerrain(hole: Hole, view: View, width: number, height: numbe
     }
   }
   const fringe = fringeDistances(buf);
-  const frames = Array.from({ length: WIND_FRAMES }, (_, f) => colorize(buf, fringe, f));
-  plotFences(frames, hole, view, width, height);
+  const frames = Array.from({ length: WIND_FRAMES }, (_, f) => colorize(buf, fringe, f, style));
+  plotFences(frames, hole, view, width, height, style.fence);
   return { width, height, frames, ground: buf.ground };
 }

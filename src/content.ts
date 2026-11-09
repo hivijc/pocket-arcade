@@ -1,13 +1,10 @@
-import manifestJson from '../assets/manifest.json';
-import paletteJson from '../assets/palette.json';
-import hole1 from './world/holes/01.json';
-import hole2 from './world/holes/02.json';
-import hole3 from './world/holes/03.json';
 import { bakeToCanvases, loadImage, loadSprites, spriteUrl } from './render/assets';
+import type { FenceColors } from './render/fences';
 import { viewFor, type View } from './render/iso';
 import { bakeLightMask, lampsOf } from './render/lights';
 import { createPalette, type Palette } from './render/palette';
 import { bakeTerrain } from './render/terrain-bake';
+import type { CourseDef } from './world/course';
 import { parseGolfer, type GolferLayout } from './world/golfer';
 import { parseHole, type Hole } from './world/hole';
 import { parseManifest, type Manifest } from './world/manifest';
@@ -31,12 +28,15 @@ export interface GolferArt {
 }
 
 export interface Content {
+  readonly course: CourseDef;
   readonly manifest: Manifest;
   readonly palette: Palette;
   readonly holes: readonly Hole[];
   readonly perHole: readonly HoleContent[];
   readonly sprites: ReadonlyMap<string, HTMLImageElement>;
   readonly golfer: GolferArt | null;
+  readonly background: string;
+  readonly fence: FenceColors;
 }
 
 async function loadGolfer(): Promise<GolferArt | null> {
@@ -48,15 +48,19 @@ async function loadGolfer(): Promise<GolferArt | null> {
   return { layout, image: await loadImage(url) };
 }
 
-export async function loadContent(): Promise<Content> {
-  const manifest = parseManifest(manifestJson);
-  const palette = createPalette(paletteJson);
-  const holes = [hole1, hole2, hole3].map((raw, i) => parseHole(raw, manifest, `holes/0${i + 1}.json`));
+/** Parses, bakes and loads everything one course needs. The golfer is shared by every course. */
+export async function loadContent(course: CourseDef): Promise<Content> {
+  const manifest = parseManifest(course.manifest);
+  const palette = createPalette(course.palette);
+  const holes = course.holes.map(({ file, raw }) => parseHole(raw, manifest, `${course.id}/${file}`));
   const perHole = holes.map((hole) => {
     const view = viewFor(hole, BUF_W, BUF_H);
-    const bake = bakeTerrain(hole, view, BUF_W, BUF_H);
+    const bake = bakeTerrain(hole, view, BUF_W, BUF_H, course.terrain);
     return { hole, view, terrain: bakeToCanvases(bake), light: bakeLightMask(bake, view, lampsOf(hole, manifest)) };
   });
-  const [sprites, golfer] = await Promise.all([loadSprites(manifest), loadGolfer()]);
-  return { manifest, palette, holes, perHole, sprites, golfer };
+  const [sprites, golfer] = await Promise.all([loadSprites(manifest, course.spriteDir), loadGolfer()]);
+  return {
+    course, manifest, palette, holes, perHole, sprites, golfer,
+    background: course.background, fence: course.terrain.fence,
+  };
 }

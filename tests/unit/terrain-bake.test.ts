@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  RAMPS, WIND_FRAMES, bakeTerrain, bayer, hash2, insideConvex, rampLevel, valueNoise,
+  RAMPS, WIND_FRAMES, bakeTerrain, bayer, hash2, insideConvex, parseTerrainStyle, rampLevel, valueNoise,
 } from '../../src/render/terrain-bake';
 import { project, viewFor } from '../../src/render/iso';
 import { makeHole } from '../helpers/makeHole';
@@ -78,5 +78,50 @@ describe('bakeTerrain', () => {
   });
   it('is deterministic', () => {
     expect(bakeTerrain(hole, view, 360, 270).frames[1]).toEqual(bake.frames[1]);
+  });
+});
+
+describe('terrain styles', () => {
+  const rows = ['GPPPG', 'GWWWG', 'GGGGG'];
+  const hole = makeHole({ width: 5, depth: 3, rows, tee: [0.5, 0.5], cup: [4.5, 2.5] });
+  const view = viewFor(hole, 360, 270);
+  const style = parseTerrainStyle({
+    ramps: {
+      G: ['#010101'], R: ['#020202'], S: ['#030303'], W: ['#040404'], sideL: ['#050505'], sideR: ['#060606'],
+      P: ['#100000', '#200000', '#300000'], fringe: ['#070707'], rim: ['#0a0000', '#0b0000'],
+    },
+    rim: 'speckle',
+    fence: { post: '#0c0c0c', postFoot: '#0d0d0d', rail: '#0e0e0e' },
+  });
+  const bake = bakeTerrain(hole, view, 360, 270, style);
+  const colorsIn = (kindAt: (x: number, y: number) => boolean) => {
+    const seen = new Set<string>();
+    for (let y = 0; y < 270; y++) for (let x = 0; x < 360; x++) {
+      const i = (y * 360 + x) * 4;
+      if (bake.frames[0][i + 3] && kindAt(x, y)) seen.add(bake.frames[0].slice(i, i + 3).join(','));
+    }
+    return seen;
+  };
+  const all = colorsIn(() => true);
+
+  it('paints only from the given ramps and fence colours', () => {
+    const allowed = new Set([
+      ...Object.values(style.ramps).flat().map((c) => c.join(',')),
+      '12,12,12', '13,13,13', '14,14,14',
+    ]);
+    for (const c of all) expect(allowed.has(c), c).toBe(true);
+  });
+  it('draws planks with dark seams and lighter boards', () => {
+    const [sx, sy] = project(view, 2.5, 0.5, 0);
+    const near = colorsIn((x, y) => Math.abs(x - sx) < 10 && Math.abs(y - sy) < 4);
+    expect(near.has('16,0,0')).toBe(true); // seam
+    expect([...near].some((c) => c === '32,0,0' || c === '48,0,0')).toBe(true); // boards
+  });
+  it('speckles the rim from every rim colour', () => {
+    expect(all.has('10,0,0')).toBe(true);
+    expect(all.has('11,0,0')).toBe(true);
+  });
+  it('rejects a style with an empty ramp', () => {
+    expect(() => parseTerrainStyle({ ...{ rim: 'stripe', fence: style.fence }, ramps: { ...{ G: [] } } as never })).toThrow(/ramp "G"/);
   });
 });

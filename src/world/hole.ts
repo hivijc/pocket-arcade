@@ -3,7 +3,8 @@ import { BALL_R } from '../physics/constants';
 import type { Manifest } from './manifest';
 
 export type { Vec2 } from '../core/geometry';
-export type Surface = 'G' | 'R' | 'S' | 'W' | 'X';
+/** Green, Rough, Sand, Water, planks (a boardwalk: plays like green), and X for no tile. */
+export type Surface = 'G' | 'R' | 'S' | 'W' | 'P' | 'X';
 
 export interface Segment { readonly a: Vec2; readonly b: Vec2 }
 export interface Circle { readonly c: Vec2; readonly r: number }
@@ -28,7 +29,7 @@ export interface Hole {
 export class HoleError extends Error {}
 
 export const QUARTER = 0.25;
-const SURFACES = new Set(['G', 'R', 'S', 'W', 'X']);
+const SURFACES = new Set(['G', 'R', 'S', 'W', 'P', 'X']);
 
 type Fail = (msg: string) => never;
 

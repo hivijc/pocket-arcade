@@ -1,0 +1,37 @@
+{
+  "name": "Sandbar",
+  "par": 2,
+  "size": [13, 7],
+  "height": [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  ],
+  "surface": [
+    "RRRRRRRRRRRRR",
+    "RRGGGGGGGGGRR",
+    "RGGRSSSSSRGGR",
+    "GGGRSSSSSRGGG",
+    "RGGRSSSSSRGGR",
+    "RRGGGGGGGGGRR",
+    "RRRRRRRRRRRRR"
+  ],
+  "tee": [1.5, 3.5],
+  "cup": [11.5, 3.5],
+  "props": [
+    { "sprite": "umbrella", "at": [0.5, 0.5] },
+    { "sprite": "deck-chair", "at": [1.8, 0.5] },
+    { "sprite": "seagull", "at": [7.5, 0.5] },
+    { "sprite": "surfboard", "at": [12.5, 0.5] },
+    { "sprite": "rope-light-post", "at": [4, 0.25] },
+    { "sprite": "rope-light-post", "at": [9, 6.75] },
+    { "sprite": "crab", "at": [5.5, 6.5] },
+    { "sprite": "lifebuoy-stand", "at": [0.5, 6.5] },
+    { "sprite": "palm", "at": [12.4, 6.4] }
+  ]
+}

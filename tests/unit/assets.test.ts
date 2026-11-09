@@ -1,24 +1,33 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { describe, expect, it } from 'vitest';
-import manifestJson from '../../assets/manifest.json';
-import paletteJson from '../../assets/palette.json';
 import { parsePalette } from '../../src/render/palette';
 import { parseGolfer } from '../../src/world/golfer';
 import { parseManifest } from '../../src/world/manifest';
 
-const palette = new Set(parsePalette(paletteJson).map((c) => c.join(',')));
+/** Each course's palette, manifest and sprite folders (Backyard keeps the top-level paths; UI art uses its palette). */
+const COURSES = [
+  { id: 'backyard', palette: 'assets/palette.json', manifest: 'assets/manifest.json', sprites: 'assets/sprites', extra: ['assets/ui'] },
+  { id: 'boardwalk', palette: 'assets/courses/boardwalk/palette.json', manifest: 'assets/courses/boardwalk/manifest.json', sprites: 'assets/courses/boardwalk/sprites', extra: [] },
+];
+const readJson = (f: string): unknown => JSON.parse(readFileSync(f, 'utf8'));
 const pngsIn = (dir: string) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.png')).map((f) => `${dir}/${f}`) : []);
 
-describe('assets', () => {
+describe.each(COURSES)('$id assets', (c) => {
+  const palette = new Set(parsePalette(readJson(c.palette)).map((rgb) => rgb.join(',')));
+
+  it('has a 32-colour palette', () => {
+    expect(palette.size).toBe(32);
+  });
+
   it('every manifest image file exists', () => {
-    for (const [name, def] of Object.entries(parseManifest(manifestJson))) {
-      if (def.image) expect(existsSync(`assets/sprites/${def.image.src}`), `${name}: ${def.image.src}`).toBe(true);
+    for (const [name, def] of Object.entries(parseManifest(readJson(c.manifest)))) {
+      if (def.image) expect(existsSync(`${c.sprites}/${def.image.src}`), `${name}: ${def.image.src}`).toBe(true);
     }
   });
 
-  it('every sprite and UI image uses only palette colours and full or no alpha', () => {
-    for (const file of [...pngsIn('assets/sprites'), ...pngsIn('assets/ui')]) {
+  it('every sprite uses only its palette colours and full or no alpha', () => {
+    for (const file of [c.sprites, ...c.extra].flatMap(pngsIn)) {
       const png = PNG.sync.read(readFileSync(file));
       for (let i = 0; i < png.data.length; i += 4) {
         const a = png.data[i + 3];
@@ -28,10 +37,23 @@ describe('assets', () => {
       }
     }
   });
+});
 
+describe('Boardwalk manifest', () => {
+  const m = parseManifest(readJson('assets/courses/boardwalk/manifest.json'));
+  it('has lights for night and a swaying palm', () => {
+    expect(Object.values(m).some((d) => d.light)).toBe(true);
+    expect(m.palm.sway).toBe(true);
+  });
+  it('every prop has a PixelLab image', () => {
+    for (const [name, def] of Object.entries(m)) expect(def.image, name).toBeDefined();
+  });
+});
+
+describe('golfer', () => {
   it('the golfer layout (if present) matches its sheet', () => {
     if (!existsSync('assets/golfer.json')) return;
-    const g = parseGolfer(JSON.parse(readFileSync('assets/golfer.json', 'utf8')));
+    const g = parseGolfer(readJson('assets/golfer.json'));
     const png = PNG.sync.read(readFileSync(`assets/sprites/${g.src}`));
     const rowCount = Math.max(...Object.values(g.anims).flatMap((a) => Object.values(a.rows))) + 1;
     const maxFrames = Math.max(...Object.values(g.anims).map((a) => a.frames));

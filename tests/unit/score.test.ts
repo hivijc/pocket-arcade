@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BEST_KEY, STROKE_CAP, loadBest, saveBest, scoreLabel, totalStrokes, type KeyValueStore } from '../../src/game/score';
+import { BEST_KEY, STROKE_CAP, bestKey, loadBest, saveBest, scoreLabel, totalStrokes, type KeyValueStore } from '../../src/game/score';
 
 function memoryStore(initial: Record<string, string> = {}): KeyValueStore & { data: Record<string, string> } {
   const data = { ...initial };
@@ -59,5 +59,20 @@ describe('best total', () => {
   it('survives storage that throws', () => {
     expect(loadBest(brokenStore)).toBeNull();
     expect(saveBest(brokenStore, 8)).toBe(8);
+  });
+});
+
+describe('per-course bests', () => {
+  it('keeps Backyard on its original key and gives other courses their own', () => {
+    expect(bestKey('backyard')).toBe(BEST_KEY);
+    expect(bestKey('boardwalk')).toBe('minigolf:best:boardwalk');
+  });
+  it('stores each course separately', () => {
+    const store = memoryStore();
+    saveBest(store, 9, bestKey('backyard'));
+    saveBest(store, 7, bestKey('boardwalk'));
+    expect(loadBest(store, bestKey('backyard'))).toBe(9);
+    expect(loadBest(store, bestKey('boardwalk'))).toBe(7);
+    expect(loadBest(store)).toBe(9);
   });
 });

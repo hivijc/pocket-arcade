@@ -1,0 +1,38 @@
+{
+  "name": "Tide Pool Bridge",
+  "par": 3,
+  "size": [14, 7],
+  "height": [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  ],
+  "surface": [
+    "RRRRRWWWWRRRRR",
+    "RRGGGWWWWGGGRR",
+    "RGGGGWWWWGGGGR",
+    "GGGGGPPPPGGGGG",
+    "RGGGGWWWWGSGGR",
+    "RRGGGWWWWGSGRR",
+    "RRRRRWWWWRRRRR"
+  ],
+  "tee": [1.5, 3.5],
+  "cup": [11.5, 5.5],
+  "props": [
+    { "sprite": "rope-light-post", "at": [5.15, 2.85] },
+    { "sprite": "rope-light-post", "at": [8.85, 2.85] },
+    { "sprite": "rope-light-post", "at": [5.15, 4.15] },
+    { "sprite": "rope-light-post", "at": [8.85, 4.15] },
+    { "sprite": "umbrella", "at": [0.5, 0.5] },
+    { "sprite": "crab", "at": [2.5, 6.5] },
+    { "sprite": "seagull", "at": [11.5, 0.5] },
+    { "sprite": "lighthouse", "at": [13.4, 0.6] },
+    { "sprite": "palm", "at": [0.5, 6.4] },
+    { "sprite": "lifebuoy-stand", "at": [4.5, 6.5] }
+  ]
+}

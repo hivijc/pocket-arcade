@@ -4,7 +4,7 @@ import { heightAt } from '../physics/terrain';
 import { PLACEHOLDER_ANIMS, type GolferLayout } from '../world/golfer';
 import type { Hole } from '../world/hole';
 import type { Manifest, SpriteImage } from '../world/manifest';
-import { classifyWall, picketPixels, wallDepth, type Px } from './fences';
+import { FENCE_COLORS, classifyWall, picketPixels, wallDepth, type FenceColors, type Px } from './fences';
 import { golferPose, type GolferPose } from './golfer-pose';
 import { depthOf, project, sortByDepth, type View } from './iso';
 import type { PhaseLook } from './time-of-day';
@@ -24,6 +24,10 @@ export interface Frame {
   readonly wind: number;
   readonly width: number;
   readonly height: number;
+  /** The course's backdrop colour (default: Backyard's). */
+  readonly background?: string;
+  /** The course's fence colours (default: Backyard's pickets). */
+  readonly fence?: FenceColors;
 }
 
 interface Drawable {
@@ -31,7 +35,7 @@ interface Drawable {
   draw(ctx: CanvasRenderingContext2D): void;
 }
 
-/** The canvas backdrop behind the island; the page background is set to its post-processed colour. */
+/** Backyard's canvas backdrop behind the island; the page background is set to its post-processed colour. */
 export const BACKGROUND = '#2c2c3a';
 
 const COLORS = {
@@ -81,7 +85,7 @@ function walls(f: Frame): Drawable[] {
   const items = f.hole.walls.flatMap((seg): Drawable[] => {
     const side = classifyWall(f.hole, seg);
     if (side === 'back') return [];
-    const px = picketPixels(f.hole, f.view, seg);
+    const px = picketPixels(f.hole, f.view, seg, f.fence ?? FENCE_COLORS);
     return [{ depth: wallDepth(seg, side), draw: (ctx) => plotPx(ctx, px) }];
   });
   fenceCache.set(f.hole, items);
@@ -181,7 +185,7 @@ function drawAim(ctx: CanvasRenderingContext2D, f: Frame): void {
 
 export function renderFrame(ctx: CanvasRenderingContext2D, f: Frame): void {
   ctx.imageSmoothingEnabled = false;
-  ctx.fillStyle = COLORS.bg;
+  ctx.fillStyle = f.background ?? COLORS.bg;
   ctx.fillRect(0, 0, f.width, f.height);
   ctx.drawImage(f.terrain, 0, 0);
   drawCup(ctx, f);

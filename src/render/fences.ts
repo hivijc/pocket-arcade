@@ -5,7 +5,17 @@ import { depthOf, project, type View } from './iso';
 
 export type WallSide = 'back' | 'front' | 'inner';
 
-export const FENCE_COLORS = { post: '#efe6d2', postFoot: '#b08a62', rail: '#d9c08c' } as const;
+export interface FenceColors {
+  readonly post: string;
+  readonly postFoot: string;
+  readonly rail: string;
+  /** Posts per tile (default 8: a picket fence). Fewer, with `sag`, makes a rope-and-post fence. */
+  readonly postsPerTile?: number;
+  /** The rail dips a pixel between posts, like a slack rope. */
+  readonly sag?: boolean;
+}
+
+export const FENCE_COLORS: FenceColors = { post: '#efe6d2', postFoot: '#b08a62', rail: '#d9c08c' };
 const POST_H = 6;
 const RAIL_LIFT = 4;
 const POSTS_PER_TILE = 8;
@@ -44,10 +54,10 @@ export function wallDepth(seg: Segment, side: WallSide): number {
 }
 
 /** Pixels of a little picket fence standing on a wall segment. */
-export function picketPixels(hole: Hole, view: View, seg: Segment): Px[] {
+export function picketPixels(hole: Hole, view: View, seg: Segment, colors: FenceColors = FENCE_COLORS): Px[] {
   const [ax, ay] = seg.a;
   const [bx, by] = seg.b;
-  const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) * POSTS_PER_TILE));
+  const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) * (colors.postsPerTile ?? POSTS_PER_TILE)));
   const posts: Vec2[] = Array.from({ length: n + 1 }, (_, i) => {
     const gx = ax + ((bx - ax) * i) / n, gy = ay + ((by - ay) * i) / n;
     const [sx, sy] = project(view, gx, gy, heightAt(hole, gx, gy));
@@ -55,15 +65,16 @@ export function picketPixels(hole: Hole, view: View, seg: Segment): Px[] {
   });
   const out: Px[] = [];
   for (const [x, y] of posts) {
-    out.push({ x, y, color: FENCE_COLORS.postFoot });
-    for (let k = 1; k < POST_H; k++) out.push({ x, y: y - k, color: FENCE_COLORS.post });
+    out.push({ x, y, color: colors.postFoot });
+    for (let k = 1; k < POST_H; k++) out.push({ x, y: y - k, color: colors.post });
   }
   for (let i = 1; i < posts.length; i++) {
     const [x0, y0] = posts[i - 1];
     const [x1, y1] = posts[i];
     const steps = Math.max(1, Math.abs(x1 - x0));
     for (let j = 1; j < steps; j++) {
-      out.push({ x: x0 + Math.sign(x1 - x0) * j, y: Math.round(y0 + ((y1 - y0) * j) / steps) - RAIL_LIFT, color: FENCE_COLORS.rail });
+      const dip = colors.sag && j > steps / 4 && j < (steps * 3) / 4 ? 1 : 0;
+      out.push({ x: x0 + Math.sign(x1 - x0) * j, y: Math.round(y0 + ((y1 - y0) * j) / steps) - RAIL_LIFT + dip, color: colors.rail });
     }
   }
   return out;

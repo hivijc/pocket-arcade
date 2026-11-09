@@ -1,0 +1,38 @@
+{
+  "name": "Castle Hop",
+  "par": 3,
+  "size": [14, 7],
+  "height": [
+    [0, 0, 0, 0, 0, 1, 3, 0, 0, 2, 2, 2, 2, 2, 2],
+    [0, 0, 0, 0, 0, 1, 3, 0, 0, 2, 2, 2, 2, 2, 2],
+    [0, 0, 0, 0, 0, 1, 3, 0, 0, 2, 2, 2, 2, 2, 2],
+    [0, 0, 0, 0, 0, 1, 3, 0, 0, 2, 2, 2, 2, 2, 2],
+    [0, 0, 0, 0, 0, 1, 3, 0, 0, 2, 2, 2, 2, 2, 2],
+    [0, 0, 0, 0, 0, 1, 3, 0, 0, 2, 2, 2, 2, 2, 2],
+    [0, 0, 0, 0, 0, 1, 3, 0, 0, 2, 2, 2, 2, 2, 2],
+    [0, 0, 0, 0, 0, 1, 3, 0, 0, 2, 2, 2, 2, 2, 2]
+  ],
+  "surface": [
+    "RRRRRRRRRRRRRR",
+    "RRRRRRRSSRGGGR",
+    "GGGGGGGSSGGGGG",
+    "GGGGGGGSSGGGGG",
+    "GGGGGGGSSGGGGG",
+    "RRRRRRRSSRGGGR",
+    "RRRRRRRRRRRRRR"
+  ],
+  "tee": [1.5, 3.5],
+  "cup": [12.5, 1.5],
+  "props": [
+    { "sprite": "sandcastle", "at": [5.5, 0.6] },
+    { "sprite": "sandcastle", "at": [5.5, 6.4] },
+    { "sprite": "sandcastle", "at": [11.4, 1.7] },
+    { "sprite": "rope-light-post", "at": [3, 0.25] },
+    { "sprite": "rope-light-post", "at": [10, 6.75] },
+    { "sprite": "palm", "at": [0.5, 0.5] },
+    { "sprite": "deck-chair", "at": [1.5, 6.5] },
+    { "sprite": "surfboard", "at": [13.5, 6.5] },
+    { "sprite": "seagull", "at": [9.5, 0.5] },
+    { "sprite": "umbrella", "at": [13.4, 0.5] }
+  ]
+}

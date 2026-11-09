@@ -1,0 +1,186 @@
+{
+  "lighthouse": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.45
+    },
+    "placeholder": {
+      "color": "#fffaf0",
+      "w": 12,
+      "h": 40
+    },
+    "image": {
+      "src": "lighthouse.png",
+      "anchor": [
+        11,
+        37
+      ]
+    }
+  },
+  "umbrella": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.15
+    },
+    "placeholder": {
+      "color": "#c8463c",
+      "w": 18,
+      "h": 22
+    },
+    "image": {
+      "src": "umbrella.png",
+      "anchor": [
+        11,
+        28
+      ]
+    }
+  },
+  "sandcastle": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.4
+    },
+    "placeholder": {
+      "color": "#d4a86a",
+      "w": 16,
+      "h": 14
+    },
+    "image": {
+      "src": "sandcastle.png",
+      "anchor": [
+        11,
+        19
+      ]
+    }
+  },
+  "lifebuoy-stand": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.15
+    },
+    "placeholder": {
+      "color": "#c8463c",
+      "w": 8,
+      "h": 20
+    },
+    "image": {
+      "src": "lifebuoy-stand.png",
+      "anchor": [
+        9,
+        29
+      ]
+    }
+  },
+  "crab": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.2
+    },
+    "placeholder": {
+      "color": "#e98a52",
+      "w": 8,
+      "h": 5
+    },
+    "image": {
+      "src": "crab.png",
+      "anchor": [
+        10,
+        15
+      ]
+    }
+  },
+  "seagull": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.15
+    },
+    "placeholder": {
+      "color": "#fffaf0",
+      "w": 8,
+      "h": 8
+    },
+    "image": {
+      "src": "seagull.png",
+      "anchor": [
+        9,
+        18
+      ]
+    }
+  },
+  "deck-chair": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.3
+    },
+    "placeholder": {
+      "color": "#5aa7d0",
+      "w": 12,
+      "h": 12
+    },
+    "image": {
+      "src": "deck-chair.png",
+      "anchor": [
+        8,
+        21
+      ]
+    }
+  },
+  "surfboard": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.15
+    },
+    "placeholder": {
+      "color": "#ffd27a",
+      "w": 6,
+      "h": 20
+    },
+    "image": {
+      "src": "surfboard.png",
+      "anchor": [
+        8,
+        26
+      ]
+    }
+  },
+  "rope-light-post": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.1
+    },
+    "placeholder": {
+      "color": "#6e5240",
+      "w": 2,
+      "h": 28
+    },
+    "light": {
+      "radius": 3.5
+    },
+    "image": {
+      "src": "rope-light-post.png",
+      "anchor": [
+        11,
+        26
+      ]
+    }
+  },
+  "palm": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.3
+    },
+    "placeholder": {
+      "color": "#3f7a3c",
+      "w": 16,
+      "h": 40
+    },
+    "sway": true,
+    "image": {
+      "src": "palm.png",
+      "anchor": [
+        14,
+        37
+      ]
+    }
+  }
+}
