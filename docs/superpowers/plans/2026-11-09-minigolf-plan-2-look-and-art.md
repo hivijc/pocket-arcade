@@ -2837,26 +2837,37 @@ The controller shows these to the user. **Don't start Task 15 until the user app
 
 ### Task 15: The remaining props
 
-About 45 PixelLab generations. Every call uses the approved gnome as the style anchor, so the set matches.
+About 50 PixelLab generations. Every call uses the approved gnome as the style anchor, so the set matches.
+
+**Style-lock decision (user, after Task 14):** keep the style and the golfer, but make props smaller. The first gnome came out almost person-height (about 30 px, roughly 2 tiles). Garden props should be roughly knee-to-waist high next to the 32 px golfer. So Step 0 remakes the gnome small, and the sizes below are scaled to match.
 
 **Files:** Modify: `assets/manifest.json`. Create: `assets/sprites/*.png`.
+
+- [ ] **Step 0: Remake the gnome small**
+
+Call `create_object_pro_flash` with the same description as Task 14 and these settings:
+- `width: 20, height: 24`
+- the Backyard palette
+- `style_image`: a 20×24 crop of `assets/raw/gnome.png`, centred on the face and coat, passed as `base64`. The anchor must fit inside the canvas, and the crop carries the outline and shading style.
+
+Download the result to `assets/raw/gnome-small.png`, then run `npm run ingest -- object gnome assets/raw/gnome-small.png`, which replaces the big one. This small gnome's PNG URL is **the style anchor for every prop below**.
 
 - [ ] **Step 1: Generate each prop** with `create_object_pro_flash`. Every call uses:
   - `n_directions: 1` and `view: "high top-down"`
   - the Backyard `palette` and `palette_name`
-  - `style_image: { "url": "<gnome PNG URL from Task 14>", "usage_description": "same pixel scale, outline and shading as this gnome" }`
+  - `style_image: { "url": "<small gnome PNG URL from Step 0>", "usage_description": "same pixel scale, outline and shading as this gnome" }`
 
 | name | description | width×height |
 |---|---|---|
-| big-gnome | large garden gnome holding a tiny lantern, red hat, blue coat | 32×48 |
-| flowerpot | terracotta flower pot with red geraniums | 32×32 |
-| bush | round leafy green garden shrub | 32×32 |
-| lamp | black iron garden lamp post with a warm glowing lantern on top | 32×64 |
-| tree | small leafy backyard apple tree | 64×64 |
-| bird-bath | stone bird bath with a little water | 32×32 |
-| watering-can | green metal watering can | 32×32 |
-| hose-reel | garden hose reel wound with green hose | 32×32 |
-| string-light-pole | wooden pole with a string of warm fairy lights | 32×64 |
+| big-gnome | large garden gnome holding a tiny lantern, red hat, blue coat | 24×32 |
+| flowerpot | terracotta flower pot with red geraniums | 20×20 |
+| bush | round leafy green garden shrub | 24×24 |
+| lamp | black iron garden lamp post with a warm glowing lantern on top | 20×48 |
+| tree | small leafy backyard apple tree | 48×56 |
+| bird-bath | stone bird bath with a little water | 20×24 |
+| watering-can | green metal watering can | 20×20 |
+| hose-reel | garden hose reel wound with green hose | 20×20 |
+| string-light-pole | wooden pole with a string of warm fairy lights | 20×48 |
 
 Poll each `get_object` until completed and download it to `assets/raw/<name>.png`. Check each preview. If one comes out clearly wrong (wrong subject, background not transparent, extreme mismatch with the gnome), regenerate once with a sharper description and note it.
 
