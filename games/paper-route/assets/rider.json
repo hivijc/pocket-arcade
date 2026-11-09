@@ -1,0 +1,23 @@
+{
+  "src": "rider.png",
+  "cell": [
+    25,
+    33
+  ],
+  "anchor": [
+    12,
+    32
+  ],
+  "frames": 6,
+  "fps": 10,
+  "rows": {
+    "south": 0,
+    "south-west": 1,
+    "west": 2,
+    "north-west": 3,
+    "north": 4,
+    "north-east": 5,
+    "east": 6,
+    "south-east": 7
+  }
+}

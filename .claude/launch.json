@@ -4,8 +4,24 @@
     {
       "name": "minigolf-dev",
       "runtimeExecutable": "/Users/nathanielleong/.nvm/versions/node/v22.22.3/bin/npx",
-      "runtimeArgs": ["vite", "--port", "5173", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
       "port": 5173
+    },
+    {
+      "name": "paper-route",
+      "runtimeExecutable": "/Users/nathanielleong/.nvm/versions/node/v22.22.3/bin/npx",
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
+      "port": 5174
     }
   ]
 }

@@ -1,0 +1,290 @@
+{
+  "house-a-l": {
+    "placeholder": {
+      "color": "#e98a52",
+      "w": 40,
+      "h": 36
+    },
+    "image": {
+      "src": "house-a-l.png",
+      "anchor": [
+        24,
+        54
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "house-a-r": {
+    "placeholder": {
+      "color": "#e98a52",
+      "w": 40,
+      "h": 36
+    },
+    "image": {
+      "src": "house-a-r.png",
+      "anchor": [
+        23,
+        46
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "house-b-l": {
+    "placeholder": {
+      "color": "#5aa7d0",
+      "w": 40,
+      "h": 36
+    },
+    "image": {
+      "src": "house-b-l.png",
+      "anchor": [
+        24,
+        53
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "house-b-r": {
+    "placeholder": {
+      "color": "#5aa7d0",
+      "w": 40,
+      "h": 36
+    },
+    "image": {
+      "src": "house-b-r.png",
+      "anchor": [
+        23,
+        48
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "house-c-l": {
+    "placeholder": {
+      "color": "#f2c25b",
+      "w": 40,
+      "h": 36
+    },
+    "image": {
+      "src": "house-c-l.png",
+      "anchor": [
+        26,
+        54
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "house-c-r": {
+    "placeholder": {
+      "color": "#f2c25b",
+      "w": 40,
+      "h": 36
+    },
+    "image": {
+      "src": "house-c-r.png",
+      "anchor": [
+        25,
+        49
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "mailbox-sub": {
+    "placeholder": {
+      "color": "#c8463c",
+      "w": 4,
+      "h": 9
+    },
+    "image": {
+      "src": "mailbox-sub.png",
+      "anchor": [
+        5,
+        15
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "mailbox-plain": {
+    "placeholder": {
+      "color": "#8a8a96",
+      "w": 4,
+      "h": 9
+    },
+    "image": {
+      "src": "mailbox-plain.png",
+      "anchor": [
+        6,
+        15
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "tree": {
+    "placeholder": {
+      "color": "#2f5530",
+      "w": 16,
+      "h": 30
+    },
+    "image": {
+      "src": "tree.png",
+      "anchor": [
+        13,
+        31
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "hedge": {
+    "placeholder": {
+      "color": "#3f6b3a",
+      "w": 18,
+      "h": 10
+    },
+    "image": {
+      "src": "hedge.png",
+      "anchor": [
+        11,
+        18
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "car": {
+    "placeholder": {
+      "color": "#2f6f9a",
+      "w": 28,
+      "h": 18
+    },
+    "image": {
+      "src": "car.png",
+      "anchor": [
+        17,
+        25
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "puddle": {
+    "placeholder": {
+      "color": "#5aa7d0",
+      "w": 16,
+      "h": 5
+    },
+    "image": {
+      "src": "puddle.png",
+      "anchor": [
+        12,
+        6
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "sprinkler": {
+    "placeholder": {
+      "color": "#4a4a5a",
+      "w": 3,
+      "h": 4
+    },
+    "image": {
+      "src": "sprinkler.png",
+      "anchor": [
+        7,
+        15
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "spray": {
+    "placeholder": {
+      "color": "#9fd8ee",
+      "w": 22,
+      "h": 12
+    },
+    "image": {
+      "src": "spray.png",
+      "anchor": [
+        15,
+        26
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "bundle": {
+    "placeholder": {
+      "color": "#efe6d2",
+      "w": 8,
+      "h": 6
+    },
+    "image": {
+      "src": "bundle.png",
+      "anchor": [
+        8,
+        15
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "dog-run": {
+    "placeholder": {
+      "color": "#8a6a4a",
+      "w": 12,
+      "h": 9
+    },
+    "image": {
+      "src": "dog-run.png",
+      "anchor": [
+        10,
+        21
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "dog-sit": {
+    "placeholder": {
+      "color": "#8a6a4a",
+      "w": 9,
+      "h": 10
+    },
+    "image": {
+      "src": "dog-sit.png",
+      "anchor": [
+        8,
+        19
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "paper": {
+    "placeholder": {
+      "color": "#fffaf0",
+      "w": 5,
+      "h": 3
+    },
+    "image": {
+      "src": "paper.png",
+      "anchor": [
+        4,
+        15
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  }
+}

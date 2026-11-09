@@ -1,0 +1,31 @@
+:root { --bg: #9fd8ee; --ink: #14141c; --muted: #4a4a5a; --accent: #c8463c; --panel: rgba(239, 230, 210, 0.9); }
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: var(--page, var(--bg)); color: var(--ink);
+  font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace;
+}
+#stage { position: fixed; inset: 0; display: grid; place-items: center; }
+#game { display: block; image-rendering: pixelated; }
+#hud { position: fixed; inset: 0; pointer-events: none; }
+.bar {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  display: none; gap: 28px; padding: 8px 18px; background: var(--panel); border-radius: 10px;
+}
+.bar.on { display: flex; }
+.stat b { display: block; font-size: 18px; color: var(--accent); text-align: center; }
+.stat span { font-size: 10px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+.popup {
+  position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+  font-size: 24px; font-weight: bold; color: #fffaf0; text-shadow: 0 2px 0 #14141c; visibility: hidden;
+}
+.popup.on { visibility: visible; }
+.hint { position: absolute; bottom: 8px; left: 16px; font-size: 11px; color: var(--muted); }
+.overlay { position: absolute; inset: 0; display: none; place-items: center; }
+.overlay.on { display: grid; }
+.card { background: var(--panel); padding: 24px 32px; border-radius: 12px; text-align: center; min-width: 300px; max-width: 90vw; }
+.card h1 { margin: 0 0 8px; color: var(--accent); font-size: 24px; }
+.card .keys, .card .best { color: var(--muted); font-size: 12px; }
+.card .cta { font-weight: bold; }
+table { border-collapse: collapse; margin: 12px auto; }
+th, td { padding: 4px 12px; text-align: left; }
