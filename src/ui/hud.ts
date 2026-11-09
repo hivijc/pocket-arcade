@@ -9,7 +9,7 @@ export interface HudCallbacks {
 }
 
 export interface Hud {
-  update(state: GameState, holes: readonly Hole[], best: number | null, menuOpen: boolean): void;
+  update(state: GameState, holes: readonly Hole[], best: number | null): void;
   showError(message: string): void;
 }
 
@@ -87,7 +87,7 @@ export function createHud(root: HTMLElement, cb: HudCallbacks): Hud {
   let shownScorecard = '';
 
   return {
-    update(state, holes, best, menuOpen) {
+    update(state, holes, best) {
       const h = holes[state.holeIndex];
       const p = state.phase;
       hole.value.textContent = `${state.holeIndex + 1} · ${h.name}`;
@@ -99,7 +99,7 @@ export function createHud(root: HTMLElement, cb: HudCallbacks): Hud {
       popup.textContent = message;
       popup.classList.toggle('on', message !== '');
       title.root.classList.toggle('on', p.kind === 'title');
-      menu.root.classList.toggle('on', menuOpen);
+      menu.root.classList.toggle('on', state.paused);
       score.root.classList.toggle('on', p.kind === 'scorecard');
       if (p.kind === 'scorecard') {
         const key = `${state.strokes.join(',')}|${best}`;

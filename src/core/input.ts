@@ -33,7 +33,7 @@ export function attachInput(canvas: HTMLCanvasElement, bufW: number, bufH: numbe
       if (!e.repeat) push({ type: 'press' });
     } else if (e.code === 'KeyR' && !e.repeat) {
       push({ type: 'retry' });
-    } else if (e.code === 'Escape') {
+    } else if (e.code === 'Escape' && !e.repeat) {
       push({ type: 'escape' });
     }
   };

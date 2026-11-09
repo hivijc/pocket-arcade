@@ -28,6 +28,8 @@ export interface GameState {
   readonly aim: number;
   /** Ball events from the latest update (for sounds and effects). */
   readonly events: readonly BallEvent[];
+  /** True while the pause menu is open: time stands still and only pause/resume/start are handled. */
+  readonly paused: boolean;
 }
 
 export type Action =
@@ -36,6 +38,10 @@ export type Action =
   | { readonly type: 'press' }
   | { readonly type: 'release' }
   | { readonly type: 'retry' }
+  | { readonly type: 'togglePause' }
+  | { readonly type: 'resume' }
+  /** Drop an in-progress charge (e.g. the window lost focus before the release arrived). */
+  | { readonly type: 'cancel' }
   | { readonly type: 'putt'; readonly angle: number; readonly power: number };
 
 /** Power 0..1 after charging for t seconds: rises to 1, falls back to 0, repeats. */
@@ -54,7 +60,7 @@ const withStrokes = (s: GameState, n: number): GameState => ({
 
 export function initialState(holes: readonly Hole[]): GameState {
   const first = holes[0];
-  return { phase: { kind: 'title' }, holeIndex: 0, strokes: [0], ball: atTee(first), lastRest: first.tee, aim: 0, events: [] };
+  return { phase: { kind: 'title' }, holeIndex: 0, strokes: [0], ball: atTee(first), lastRest: first.tee, aim: 0, events: [], paused: false };
 }
 
 function newGame(holes: readonly Hole[]): GameState {
@@ -81,11 +87,31 @@ function shoot(s: GameState, angle: number, power: number, holes: readonly Hole[
   };
 }
 
+/** Charging falls back to aiming; any other phase is kept. */
+function uncharge(s: GameState): GameState {
+  return s.phase.kind === 'charging' ? { ...s, phase: { kind: 'aiming' } } : s;
+}
+
+function togglePause(s: GameState): GameState {
+  const k = s.phase.kind;
+  if (k === 'title' || k === 'scorecard') return s;
+  return s.paused ? { ...s, paused: false } : { ...uncharge(s), paused: true };
+}
+
 export function reduce(s: GameState, a: Action, holes: readonly Hole[]): GameState {
+  if (a.type === 'start') return newGame(holes);
+  if (a.type === 'togglePause') return togglePause(s);
+  if (a.type === 'resume') return s.paused ? { ...s, paused: false } : s;
+  return s.paused ? s : play(s, a, holes);
+}
+
+type PlayAction = Exclude<Action, { readonly type: 'start' | 'togglePause' | 'resume' }>;
+
+function play(s: GameState, a: PlayAction, holes: readonly Hole[]): GameState {
   const p = s.phase;
   switch (a.type) {
-    case 'start':
-      return newGame(holes);
+    case 'cancel':
+      return uncharge(s);
     case 'aim':
       return { ...s, aim: a.angle };
     case 'press':
@@ -125,6 +151,7 @@ function roll(s: GameState, t: number, dt: number, holes: readonly Hole[]): Game
 
 /** Advance time by dt seconds. The main loop calls this with the fixed physics step. */
 export function update(s: GameState, dt: number, holes: readonly Hole[]): GameState {
+  if (s.paused) return s;
   const base = s.events.length > 0 ? { ...s, events: [] } : s;
   const p = base.phase;
   switch (p.kind) {

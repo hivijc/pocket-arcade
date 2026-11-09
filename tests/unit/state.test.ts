@@ -127,3 +127,62 @@ describe('penalties', () => {
     expect(s.phase.kind === 'holed' && s.phase.label).toBe('+4');
   });
 });
+
+describe('pause and cancel', () => {
+  const charging = () => reduce(aimingOn(), { type: 'press' }, HOLES);
+
+  it('starts unpaused', () => {
+    expect(initialState(HOLES).paused).toBe(false);
+  });
+
+  it('togglePause pauses and unpauses during play', () => {
+    const paused = reduce(aimingOn(), { type: 'togglePause' }, HOLES);
+    expect(paused.paused).toBe(true);
+    expect(reduce(paused, { type: 'togglePause' }, HOLES).paused).toBe(false);
+  });
+
+  it('pausing while charging drops the charge back to aiming', () => {
+    const paused = reduce(charging(), { type: 'togglePause' }, HOLES);
+    expect(paused.paused).toBe(true);
+    expect(paused.phase.kind).toBe('aiming');
+    const resumed = reduce(paused, { type: 'resume' }, HOLES);
+    expect(resumed.paused).toBe(false);
+    expect(resumed.phase.kind).toBe('aiming');
+    expect(reduce(resumed, { type: 'release' }, HOLES)).toBe(resumed);
+  });
+
+  it('togglePause is ignored on the title and scorecard', () => {
+    const title = initialState(HOLES);
+    expect(reduce(title, { type: 'togglePause' }, HOLES)).toBe(title);
+    const card: GameState = { ...title, phase: { kind: 'scorecard' } };
+    expect(reduce(card, { type: 'togglePause' }, HOLES)).toBe(card);
+  });
+
+  it('while paused, update changes nothing and play actions are ignored', () => {
+    const rolling = reduce(aimingOn(), { type: 'putt', angle: 0, power: 0.5 }, HOLES);
+    const paused = reduce(rolling, { type: 'togglePause' }, HOLES);
+    expect(update(paused, STEP, HOLES)).toBe(paused);
+    const aimingPaused = reduce(aimingOn(), { type: 'togglePause' }, HOLES);
+    for (const a of [{ type: 'press' }, { type: 'release' }, { type: 'retry' }, { type: 'cancel' }, { type: 'aim', angle: 1 }, { type: 'putt', angle: 0, power: 1 }] as const) {
+      expect(reduce(aimingPaused, a, HOLES)).toBe(aimingPaused);
+    }
+  });
+
+  it('resume is a no-op when not paused', () => {
+    const s = aimingOn();
+    expect(reduce(s, { type: 'resume' }, HOLES)).toBe(s);
+  });
+
+  it('start clears paused', () => {
+    const paused = reduce(aimingOn(), { type: 'togglePause' }, HOLES);
+    const s = reduce(paused, { type: 'start' }, HOLES);
+    expect(s.paused).toBe(false);
+    expect(s.phase.kind).toBe('intro');
+  });
+
+  it('cancel turns charging back into aiming and otherwise does nothing', () => {
+    expect(reduce(charging(), { type: 'cancel' }, HOLES).phase.kind).toBe('aiming');
+    const s = aimingOn();
+    expect(reduce(s, { type: 'cancel' }, HOLES)).toBe(s);
+  });
+});

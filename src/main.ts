@@ -49,15 +49,14 @@ function boot(): void {
   const hudRoot = document.getElementById('hud') as HTMLElement;
   let content: Content | null = null;
   let state: GameState | null = null;
-  let menuOpen = false;
 
   const dispatch = (a: Action) => {
     if (content && state) state = reduce(state, a, content.holes);
   };
   const hud = createHud(hudRoot, {
     onPlay: () => dispatch({ type: 'start' }),
-    onResume: () => { menuOpen = false; },
-    onRestart: () => { menuOpen = false; dispatch({ type: 'start' }); },
+    onResume: () => dispatch({ type: 'resume' }),
+    onRestart: () => dispatch({ type: 'start' }),
   });
 
   const ctx = canvas.getContext('2d');
@@ -88,13 +87,9 @@ function boot(): void {
 
   const onInput = (e: InputEvent) => {
     if (!state) return;
-    const kind = state.phase.kind;
     if (e.type === 'escape') {
-      if (kind !== 'title' && kind !== 'scorecard') menuOpen = !menuOpen;
-      return;
-    }
-    if (menuOpen) return;
-    if (e.type === 'aimAt') {
+      dispatch({ type: 'togglePause' });
+    } else if (e.type === 'aimAt') {
       const b = state.ball;
       const [gx, gy] = unproject(views[state.holeIndex], e.sx, e.sy, b.z);
       dispatch({ type: 'aim', angle: Math.atan2(gy - b.y, gx - b.x) });
@@ -106,6 +101,11 @@ function boot(): void {
   fitCanvas(canvas);
   window.addEventListener('resize', () => fitCanvas(canvas));
   attachInput(canvas, BUF_W, BUF_H, onInput);
+  // A release that happens while the window is unfocused never arrives: drop the charge instead.
+  window.addEventListener('blur', () => dispatch({ type: 'cancel' }));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) dispatch({ type: 'cancel' });
+  });
 
   const storage = safeStorage();
   let best = loadBest(storage);
@@ -114,15 +114,13 @@ function boot(): void {
 
   startLoop((dt) => {
     if (!state) return;
-    if (!menuOpen) {
-      const n = steps(dt);
-      for (let i = 0; i < n; i++) state = update(state, STEP, holes);
-    }
+    const n = steps(dt);
+    for (let i = 0; i < n; i++) state = update(state, STEP, holes);
     if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') best = saveBest(storage, totalStrokes(state.strokes));
     prevKind = state.phase.kind;
     const i = state.holeIndex;
     renderFrame(ctx, { state, hole: holes[i], view: views[i], terrain: terrainFor(i), manifest, width: BUF_W, height: BUF_H });
-    hud.update(state, holes, best, menuOpen);
+    hud.update(state, holes, best);
   });
 
   if (import.meta.env.DEV) {
