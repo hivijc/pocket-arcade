@@ -9,16 +9,23 @@ export function createStepper(stepSeconds: number, maxSteps = 12): (dt: number) 
   };
 }
 
-/** Calls `frame(dt)` every animation frame (dt in seconds, capped at 0.25). Returns a stop function. */
+/**
+ * Calls `frame(dt)` every animation frame (dt in seconds, capped at 0.25). Returns a stop function,
+ * which is safe to call from inside `frame`.
+ */
 export function startLoop(frame: (dt: number) => void): () => void {
   let last = performance.now();
   let id = 0;
+  let running = true;
   const tick = (now: number) => {
     const dt = Math.min(0.25, (now - last) / 1000);
     last = now;
     frame(dt);
-    id = requestAnimationFrame(tick);
+    if (running) id = requestAnimationFrame(tick);
   };
   id = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(id);
+  return () => {
+    running = false;
+    cancelAnimationFrame(id);
+  };
 }

@@ -8,7 +8,7 @@ import { createStepper, startLoop } from './core/loop';
 import { loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
 import { STEP } from './physics/constants';
-import { unproject, viewFor } from './render/iso';
+import { unproject, viewFor, type View } from './render/iso';
 import { renderFrame } from './render/renderer';
 import { drawTerrain } from './render/terrain-draw';
 import { createHud } from './ui/hud';
@@ -22,12 +22,17 @@ const LOAD_ERROR = "Couldn't load the Backyard — try refreshing";
 interface Content {
   readonly manifest: Manifest;
   readonly holes: readonly Hole[];
+  readonly views: readonly View[];
+  /** Pre-drawn terrain per hole, built up front so a drawing failure surfaces at boot. */
+  readonly terrains: readonly HTMLCanvasElement[];
 }
 
 function loadContent(): Content {
   const manifest = parseManifest(manifestJson);
   const holes = [hole1, hole2, hole3].map((raw, i) => parseHole(raw, manifest, `holes/0${i + 1}.json`));
-  return { manifest, holes };
+  const views = holes.map((h) => viewFor(h, BUF_W, BUF_H));
+  const terrains = holes.map((h, i) => drawTerrain(h, views[i], BUF_W, BUF_H));
+  return { manifest, holes, views, terrains };
 }
 
 function safeStorage(): KeyValueStore | null {
@@ -60,6 +65,11 @@ function boot(): void {
   });
 
   const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    console.error('2D canvas is not available');
+    hud.showError(LOAD_ERROR);
+    return;
+  }
   try {
     content = loadContent();
   } catch (err) {
@@ -67,23 +77,8 @@ function boot(): void {
     hud.showError(LOAD_ERROR);
     return;
   }
-  if (!ctx) {
-    console.error('2D canvas is not available');
-    hud.showError(LOAD_ERROR);
-    return;
-  }
-  const { holes, manifest } = content;
+  const { holes, manifest, views, terrains } = content;
   state = initialState(holes);
-
-  const views = holes.map((h) => viewFor(h, BUF_W, BUF_H));
-  const terrains = new Map<number, HTMLCanvasElement>();
-  const terrainFor = (i: number) => {
-    const cached = terrains.get(i);
-    if (cached) return cached;
-    const made = drawTerrain(holes[i], views[i], BUF_W, BUF_H);
-    terrains.set(i, made);
-    return made;
-  };
 
   const onInput = (e: InputEvent) => {
     if (!state) return;
@@ -112,17 +107,26 @@ function boot(): void {
   let prevKind = state.phase.kind;
   const steps = createStepper(STEP);
 
-  startLoop((dt) => {
+  const frame = (dt: number) => {
     if (!state) return;
     const n = steps(dt);
     for (let i = 0; i < n; i++) state = update(state, STEP, holes);
     if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') best = saveBest(storage, totalStrokes(state.strokes));
     prevKind = state.phase.kind;
     const i = state.holeIndex;
-    renderFrame(ctx, { state, hole: holes[i], view: views[i], terrain: terrainFor(i), manifest, width: BUF_W, height: BUF_H });
+    renderFrame(ctx, { state, hole: holes[i], view: views[i], terrain: terrains[i], manifest, width: BUF_W, height: BUF_H });
     hud.update(state, holes, best);
     // Ball events accumulate across this frame's substeps; once they've been read (Plan 2: audio), drop them.
     state = clearEvents(state);
+  };
+  const stop = startLoop((dt) => {
+    try {
+      frame(dt);
+    } catch (err) {
+      console.error('Game loop stopped after an error:', err);
+      hud.showError(LOAD_ERROR);
+      stop();
+    }
   });
 
   if (import.meta.env.DEV) {
