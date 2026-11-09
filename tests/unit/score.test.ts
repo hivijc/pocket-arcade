@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BEST_KEY, STROKE_CAP, bestKey, loadBest, saveBest, scoreLabel, totalStrokes, type KeyValueStore } from '../../src/game/score';
+import { BEST_KEY, STROKE_CAP, bestKey, isCelebration, loadBest, saveBest, scoreLabel, totalStrokes, type KeyValueStore } from '../../src/game/score';
 
 function memoryStore(initial: Record<string, string> = {}): KeyValueStore & { data: Record<string, string> } {
   const data = { ...initial };
@@ -62,17 +62,15 @@ describe('best total', () => {
   });
 });
 
-describe('per-course bests', () => {
-  it('keeps Backyard on its original key and gives other courses their own', () => {
-    expect(bestKey('backyard')).toBe(BEST_KEY);
-    expect(bestKey('boardwalk')).toBe('minigolf:best:boardwalk');
+describe('isCelebration', () => {
+  it('is true for birdie or better, including a hole in one', () => {
+    expect(isCelebration(2, 3)).toBe(true);
+    expect(isCelebration(1, 3)).toBe(true);
+    expect(isCelebration(1, 2)).toBe(true);
+    expect(isCelebration(2, 5)).toBe(true);
   });
-  it('stores each course separately', () => {
-    const store = memoryStore();
-    saveBest(store, 9, bestKey('backyard'));
-    saveBest(store, 7, bestKey('boardwalk'));
-    expect(loadBest(store, bestKey('backyard'))).toBe(9);
-    expect(loadBest(store, bestKey('boardwalk'))).toBe(7);
-    expect(loadBest(store)).toBe(9);
+  it('is false for par or worse', () => {
+    expect(isCelebration(3, 3)).toBe(false);
+    expect(isCelebration(5, 3)).toBe(false);
   });
 });

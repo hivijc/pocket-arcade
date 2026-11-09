@@ -24,7 +24,7 @@ Inspiration only: no code, art, or assets are copied from iso-hoops. The game, i
 
 ## 3. Platform and stack
 
-- Desktop web browsers only (mouse + keyboard).
+- Desktop web browsers (mouse + keyboard), plus phones and tablets by touch (added later; see "Touch controls" below).
 - TypeScript, Canvas 2D, no game framework.
 - Vite (dev server and build), Vitest (unit tests), Playwright (one end-to-end test).
 
@@ -125,15 +125,30 @@ assets/
 - **Stop:** below a minimum speed on ground that is flat enough, velocity is zeroed and the next stroke begins.
 - Tuning constants (friction, restitution, capture speed, max putt speed) live in one `physics/constants.ts`.
 
-## 8. The three Backyard holes
+## 8. The Backyard holes
 
 | # | Name | Par | Idea |
 |---|---|---|---|
 | 1 | Gnome Alley | 2 | Straight lane with a gentle slope. Teaches aim and power. |
 | 2 | Picket Bank | 3 | L-shaped hole; a garden gnome blocks the corner. Bank off the picket fence. |
 | 3 | Pool Hop | 3 | A ramp launches over the kiddie pool to a raised green, or take the long way through the rough. |
+| 4 | Bunker Guard | 3 | A sand crescent guards the cup's front; go through it slowly or round the open top and bottom. |
+| 5 | Tilted Green | 2 | The green falls toward the front; a hedge blocks the direct line, so the putt curves round it. |
+| 6 | Plank Bridge | 3 | One plank-wide bridge over the pond; the cup sits up the far bank. |
+| 7 | Upper Deck | 3 | Two tiers split by a gap; only the ramp climbs, and it kicks the ball at the crest. |
+| 8 | Gnome Maze | 4 | Fence rows make a zigzag; gnomes and a hedge turn each lane into a bank shot. |
+| 9 | Grand Finale | 3 | Off the high tee, down the slope, up the kicker and over the pond to a tilted green. |
 
-Each hole fits in the 360×270 buffer with room for the grass fringe and props (about 12×8 tiles at 32 px tile width).
+Each hole fits in the 360×270 buffer with room for the grass fringe and props (`(width + depth) × 16 ≤ 360`).
+
+Holes load from `src/world/holes/*.json` in file-name order (`import.meta.glob`); each hole's terrain and light
+mask bake on first entry and are cached, and the next hole bakes during the current hole's intro.
+
+Design tools: `npm run solve -- N` finds a par line (saved in `tests/fixtures/solutions.ts`);
+`npm run eval-hole -- N` also reports the hole-in-one share of 18,000 tee shots, or traces a given shot list.
+`editor.html` (dev only) paints surfaces, shapes corner heights, places tee, cup and props, previews every
+phase, shows `parseHole` errors, runs the solver and exports the JSON. Avoid sharp V-shaped valleys between
+two slopes steeper than friction: the ball rocks in them until the 20 s shot timeout. Give them a flat floor tile.
 
 ## 9. Rendering and look
 
@@ -214,3 +229,11 @@ Budget: ~80–150 generations, including retries.
 - All 3 holes playable start to finish; scorecard shown; best total saved.
 - PixelLab golfer and props integrated; palette unified; time of day and sound working.
 - All tests pass; coverage target met; `npm run build` output runs from a static host.
+
+## Touch controls (added 2026-11-10)
+
+- **Slingshot:** touch or pen pointers (`pointerType`) drag anywhere on the stage. The shot aims opposite the drag on screen. Power runs from 0 at a 14 CSS-px dead zone to 1 at 150 CSS px (`src/game/drag.ts`, `dragShot`). Releasing putts. Dragging back inside the dead zone cancels, with no stroke.
+- **State:** a `dragging` phase (`{ kind: 'dragging', power }`) and a `drag` action set the aim and power. `release` putts from `dragging` just as it does from `charging`, and `cancel` and pause drop the drag. The mouse keeps hover-aim and hold-to-charge.
+- **Feedback:** the aim dots stay. An orange pull band behind the ball grows with power, the power bar follows the drag, and the golfer's backswing frame tracks the power.
+- **Layout:** on coarse-pointer devices below 2× the canvas uses a fractional scale to fill the limiting side (`src/ui/layout.ts`). On-screen Retry and Pause buttons appear only for `(pointer: coarse)`. The stage sets `touch-action: none` and `user-select: none`, the page sets `overscroll-behavior: none`, and the viewport meta disables user zoom.
+- **Audio:** the graph is built on the first press and resumed on the first event browsers count as user activation (a touch `pointerup`/`touchend`, not `pointerdown`).

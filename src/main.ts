@@ -1,12 +1,14 @@
 import './style.css';
 import { BUF_H, BUF_W, loadContent, type Content } from './content';
-import { attachInput, type InputEvent } from './core/input';
+import { attachInput, isUserActivation, type InputEvent } from './core/input';
+import { dragShot } from './game/drag';
 import { createStepper, startLoop } from './core/loop';
 import { bestKey, loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
 import { audioTransition, rollSpeedOf, shouldPlayAudio, soundsFor } from './audio/sfx-math';
 import { createSfx, type Sfx } from './audio/sfx';
 import { MAX_PUTT_SPEED, STEP } from './physics/constants';
+import { NO_EFFECTS, prune, spawnEffects, trackTrail, type Effects } from './render/effects';
 import { unproject } from './render/iso';
 import { parseHex } from './render/palette';
 import { buildPhaseTables, postColor, postProcess, type PhaseTables } from './render/post';
@@ -14,6 +16,7 @@ import { renderFrame } from './render/renderer';
 import { PHASES, phaseFor, type PhaseId } from './render/time-of-day';
 import { windStep } from './render/wind';
 import { createHud, type Hud } from './ui/hud';
+import { canvasScale } from './ui/layout';
 import { COURSE_IDS, COURSE_NAMES, courseFromSearch, isCourseId, loadCourseDef, type CourseId } from './world/course';
 
 const LOAD_ERROR = "Couldn't load the course — try refreshing";
@@ -28,23 +31,48 @@ function safeStorage(): KeyValueStore | null {
   }
 }
 
+/** Touch-first device (phone or tablet): slingshot hints, on-screen buttons, fractional fit on small screens. */
+const isTouchDevice = (): boolean => window.matchMedia?.('(pointer: coarse)').matches ?? false;
+
 function fitCanvas(canvas: HTMLCanvasElement): void {
-  const scale = Math.max(1, Math.floor(Math.min(window.innerWidth / BUF_W, window.innerHeight / BUF_H)));
-  canvas.style.width = `${BUF_W * scale}px`;
-  canvas.style.height = `${BUF_H * scale}px`;
+  const scale = canvasScale(window.innerWidth, window.innerHeight, BUF_W, BUF_H, isTouchDevice());
+  canvas.style.width = `${Math.floor(BUF_W * scale)}px`;
+  canvas.style.height = `${Math.floor(BUF_H * scale)}px`;
 }
 
 const currentPhase = (): PhaseId => phaseFor(window.location.search, new Date().getHours());
 
-function wireInput(canvas: HTMLCanvasElement, getContent: () => Content, getState: () => GameState | null, dispatch: (a: Action) => void): void {
+/** Touch slingshot: preview the shot while dragging, drop it inside the dead zone, putt on release. */
+function slingshotAction(e: Extract<InputEvent, { type: 'drag' | 'dragEnd' | 'dragCancel' }>, state: GameState, content: Content): Action | null {
+  const dragging = state.phase.kind === 'dragging';
+  if (e.type !== 'drag') return dragging ? { type: e.type === 'dragEnd' ? 'release' : 'cancel' } : null;
+  const shot = dragShot(e.start, e.current, content.holeContent(state.holeIndex).view, state.ball);
+  if (shot) return { type: 'drag', ...shot };
+  return dragging ? { type: 'cancel' } : null;
+}
+
+function toAction(e: InputEvent, state: GameState, content: Content): Action | null {
+  switch (e.type) {
+    case 'escape':
+      return { type: 'togglePause' };
+    case 'aimAt':
+      return { type: 'aimAt', point: unproject(content.holeContent(state.holeIndex).view, e.sx, e.sy, state.ball.z) };
+    case 'drag':
+    case 'dragEnd':
+    case 'dragCancel':
+      return slingshotAction(e, state, content);
+    default:
+      return { type: e.type };
+  }
+}
+
+function wireInput(canvas: HTMLCanvasElement, stage: HTMLElement, getContent: () => Content, getState: () => GameState | null, dispatch: (a: Action) => void): void {
   const onInput = (e: InputEvent) => {
     const state = getState();
-    if (!state) return;
-    if (e.type === 'escape') dispatch({ type: 'togglePause' });
-    else if (e.type === 'aimAt') dispatch({ type: 'aimAt', point: unproject(getContent().perHole[state.holeIndex].view, e.sx, e.sy, state.ball.z) });
-    else dispatch({ type: e.type });
+    const action = state && toAction(e, state, getContent());
+    if (action) dispatch(action);
   };
-  attachInput(canvas, BUF_W, BUF_H, onInput);
+  attachInput(canvas, BUF_W, BUF_H, onInput, stage);
   // A release that happens while the window is unfocused never arrives: drop the charge instead.
   window.addEventListener('blur', () => dispatch({ type: 'cancel' }));
   document.addEventListener('visibilitychange', () => {
@@ -69,12 +97,18 @@ function wireAudio(isPaused: () => boolean): GameAudio {
     else if (change === 'resume') sfx.resume();
   };
   document.addEventListener('visibilitychange', sync);
-  const unlock = () => {
+  // Build the audio graph on the first press, and keep resuming it until an event the browser counts as user
+  // activation arrives: on touch that is the pointerup/touchend, not the pointerdown.
+  const kinds = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as const;
+  const unlock = (e: Event) => {
     sfx.unlock();
-    if (!playing) sfx.suspend();
+    if (playing) sfx.resume();
+    else sfx.suspend();
+    if (isUserActivation(e.type, (e as PointerEvent).pointerType)) {
+      for (const k of kinds) window.removeEventListener(k, unlock, true);
+    }
   };
-  window.addEventListener('pointerdown', unlock, { once: true });
-  window.addEventListener('keydown', unlock, { once: true });
+  for (const k of kinds) window.addEventListener(k, unlock, true);
   return { sfx, sync };
 }
 
@@ -96,12 +130,25 @@ function watchPhase(onPhase: (p: PhaseId) => void): void {
 }
 
 function frameAudio(audio: GameAudio, prevKind: GameState['phase']['kind'], state: GameState): void {
-  if (prevKind === 'charging' && state.phase.kind === 'rolling') {
+  if ((prevKind === 'charging' || prevKind === 'dragging') && state.phase.kind === 'rolling') {
     audio.sfx.putt(Math.hypot(state.ball.vx, state.ball.vy) / MAX_PUTT_SPEED);
   }
   for (const s of soundsFor(state.events)) audio.sfx.play(s);
   audio.sfx.setRoll(rollSpeedOf(state));
   audio.sync();
+}
+
+/** Bakes the hole after `index` while the current hole's intro plays, so the next entry doesn't hitch. */
+function prebakeNext(content: Content, index: number): void {
+  const next = index + 1;
+  if (next >= content.holes.length || content.isBaked(next)) return;
+  window.setTimeout(() => {
+    try {
+      content.holeContent(next);
+    } catch (err) {
+      console.error(`Pre-baking hole ${next + 1} failed (it will retry on entry):`, err);
+    }
+  }, 0);
 }
 
 interface FrameDeps {
@@ -115,15 +162,15 @@ interface FrameDeps {
   readonly setState: (s: GameState) => void;
 }
 
-function drawFrame(d: FrameDeps, tables: PhaseTables, state: GameState, time: number): void {
+function drawFrame(d: FrameDeps, tables: PhaseTables, state: GameState, time: number, effects: Effects): void {
   const { ctx } = d;
   const content = d.content();
-  const h = content.perHole[state.holeIndex];
+  const h = content.holeContent(state.holeIndex);
   const look = PHASES[d.phase()];
   const wind = windStep(time);
   renderFrame(ctx, {
     state, hole: h.hole, view: h.view, terrain: h.terrain[wind], manifest: content.manifest,
-    sprites: content.sprites, golfer: content.golfer, look, time, wind, width: BUF_W, height: BUF_H,
+    sprites: content.sprites, golfer: content.golfer, look, time, wind, width: BUF_W, height: BUF_H, effects,
     background: content.background, fence: content.fence,
   });
   postProcess(ctx, BUF_W, BUF_H, content.palette.lut, tables, look.lamps ? h.light : null);
@@ -136,11 +183,13 @@ function createFrame(d: FrameDeps): (dt: number) => void {
     const key = `${c.course.id}:${id}`;
     return tables.get(key) ?? tables.set(key, buildPhaseTables(c.palette, PHASES[id])).get(key)!;
   };
-  // Best totals per storage key, read once and updated when a scorecard is saved.
+  // Best totals per course, read once and updated when a scorecard is saved.
   const bests = new Map<string, number | null>();
   const bestFor = (key: string) => (bests.has(key) ? bests.get(key)! : bests.set(key, loadBest(d.storage, key)).get(key)!);
+  let newBest = false;
   let prevKind = d.getState().phase.kind;
   let time = 0;
+  let effects = NO_EFFECTS;
   const steps = createStepper(STEP);
 
   return (dt: number) => {
@@ -150,14 +199,25 @@ function createFrame(d: FrameDeps): (dt: number) => void {
     const key = bestKey(content.course.id);
     const n = steps(dt);
     let state = d.getState();
-    for (let i = 0; i < n; i++) state = update(state, STEP, content.holes);
+    for (let i = 0; i < n; i++) {
+      const prev = state;
+      state = update(prev, STEP, content.holes);
+      effects = spawnEffects(effects, prev, state, content.holes[prev.holeIndex].cup, time);
+    }
+    effects = trackTrail(prune(effects, time), state.ball, state.phase.kind === 'rolling');
     d.setState(state);
-    if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') bests.set(key, saveBest(d.storage, totalStrokes(state.strokes), key));
-    const best = bestFor(key);
+    if (state.phase.kind === 'title') newBest = false;
+    if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') {
+      const total = totalStrokes(state.strokes);
+      const best = bestFor(key);
+      newBest = best === null || total < best;
+      bests.set(key, saveBest(d.storage, total, key));
+    }
+    if (state.phase.kind === 'intro' && prevKind !== 'intro') prebakeNext(content, state.holeIndex);
     frameAudio(d.audio, prevKind, state);
     prevKind = state.phase.kind;
-    drawFrame(d, tablesFor(content, d.phase()), state, time);
-    d.hud.update(state, content.holes, best);
+    drawFrame(d, tablesFor(content, d.phase()), state, time, effects);
+    d.hud.update(state, content.holes, bestFor(key), newBest);
     // Ball events accumulate across this frame's substeps; once read (audio, Task 19), drop them.
     d.setState(clearEvents(state));
   };
@@ -183,8 +243,8 @@ interface Game {
   readonly dispatch: (a: Action) => void;
 }
 
-/** The title card's course picker: picking a course loads it and shows its first hole behind the card. */
-function wirePicker(hud: Hud, game: Game, storage: KeyValueStore | null, load: (id: CourseId) => Promise<Content>, use: (c: Content) => void): void {
+/** Wires the HUD buttons, including the title card's course picker: picking a course loads it and shows its first hole behind the card. */
+function wireHud(hud: Hud, game: Game, storage: KeyValueStore | null, load: (id: CourseId) => Promise<Content>, use: (c: Content) => void): void {
   let selected: CourseId = game.content().course.id;
   const refresh = () => hud.setPicker(
     COURSE_IDS.map((id) => ({ id, name: COURSE_NAMES[id], best: loadBest(storage, bestKey(id)) })),
@@ -194,6 +254,8 @@ function wirePicker(hud: Hud, game: Game, storage: KeyValueStore | null, load: (
     onPlay: () => game.dispatch({ type: 'start' }),
     onResume: () => game.dispatch({ type: 'resume' }),
     onRestart: () => game.dispatch({ type: 'start' }),
+    onRetry: () => game.dispatch({ type: 'retry' }),
+    onPause: () => game.dispatch({ type: 'togglePause' }),
     onChangeCourse: () => {
       game.setState(initialState(game.content().holes));
       refresh();
@@ -213,7 +275,10 @@ function wirePicker(hud: Hud, game: Game, storage: KeyValueStore | null, load: (
   refresh();
 }
 
-function runGame(ctx: CanvasRenderingContext2D, first: Content, hud: Hud, canvas: HTMLCanvasElement, load: (id: CourseId) => Promise<Content>): void {
+function runGame(
+  ctx: CanvasRenderingContext2D, first: Content, hud: Hud, canvas: HTMLCanvasElement, stage: HTMLElement,
+  load: (id: CourseId) => Promise<Content>,
+): void {
   let content = first;
   let state: GameState = initialState(content.holes);
   const storage = safeStorage();
@@ -223,19 +288,19 @@ function runGame(ctx: CanvasRenderingContext2D, first: Content, hud: Hud, canvas
     setState: (s) => { state = s; },
     dispatch: (a) => { state = reduce(state, a, content.holes); },
   };
-  wireInput(canvas, game.content, game.state, game.dispatch);
+  wireInput(canvas, stage, game.content, game.state, game.dispatch);
 
   const audio = wireAudio(() => state.paused);
   let phase: PhaseId = currentPhase();
   const use = (c: Content) => {
     content = c;
     state = initialState(c.holes);
-    hud.setCourse({ name: c.course.name, tagline: c.course.tagline, holes: c.holes.length });
+    hud.setCourse({ name: c.course.name, tagline: c.course.tagline });
     matchPageToCanvas(c, phase);
     document.body.dataset.course = c.course.id;
   };
   use(first);
-  wirePicker(hud, game, storage, load, use);
+  wireHud(hud, game, storage, load, use);
   watchPhase((p) => {
     phase = p;
     matchPageToCanvas(content, p);
@@ -265,7 +330,8 @@ function runGame(ctx: CanvasRenderingContext2D, first: Content, hud: Hud, canvas
 
 async function boot(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
-  const hud = createHud(document.getElementById('hud') as HTMLElement);
+  const stage = document.getElementById('stage') as HTMLElement;
+  const hud = createHud(document.getElementById('hud') as HTMLElement, isTouchDevice());
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) {
     console.error('2D canvas is not available');
@@ -276,7 +342,7 @@ async function boot(): Promise<void> {
   window.addEventListener('resize', () => fitCanvas(canvas));
   try {
     const load = courseLoader();
-    runGame(ctx, await load(courseFromSearch(window.location.search)), hud, canvas, load);
+    runGame(ctx, await load(courseFromSearch(window.location.search)), hud, canvas, stage, load);
   } catch (err) {
     console.error('Failed to load course data:', err);
     hud.showError(LOAD_ERROR);

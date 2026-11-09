@@ -1,0 +1,42 @@
+{
+  "name": "Tilted Green",
+  "par": 2,
+  "size": [12, 8],
+  "height": [
+    [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+    [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7],
+    [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+    [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+    [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  ],
+  "surface": [
+    "GGGGGGGGGGGG",
+    "GGGGGGGGGGGG",
+    "GGGGGGGGGGGG",
+    "GGGGGGGGGGGG",
+    "GGGGGGGGGGGG",
+    "GGGGGGGGGGGG",
+    "GGGGGGGGGGGG",
+    "GGGGGGGGGGGG"
+  ],
+  "tee": [1.5, 4.5],
+  "cup": [10.5, 5.5],
+  "props": [
+    { "sprite": "gnome", "at": [6, 3.2] },
+    { "sprite": "bush", "at": [6, 3.9] },
+    { "sprite": "bush", "at": [6, 4.7] },
+    { "sprite": "bush", "at": [6, 5.5] },
+    { "sprite": "bush", "at": [6, 6.3] },
+    { "sprite": "bush", "at": [6, 7.1] },
+    { "sprite": "lamp", "at": [0.5, 0.5] },
+    { "sprite": "lamp", "at": [11.5, 7.5] },
+    { "sprite": "flowerpot", "at": [11.5, 0.5] },
+    { "sprite": "string-light-pole", "at": [4, 0.4] },
+    { "sprite": "string-light-pole", "at": [9, 7.6] },
+    { "sprite": "hose-reel", "at": [3.5, 7.5] }
+  ]
+}

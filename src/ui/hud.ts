@@ -1,12 +1,17 @@
 import titlePanelUrl from '../../assets/ui/title-panel.png';
-import { totalStrokes } from '../game/score';
+import { isCelebration, totalStrokes } from '../game/score';
 import { chargePower, type GameState } from '../game/state';
+import { courseSubtitle } from '../world/course';
 import type { Hole } from '../world/hole';
 
 export interface HudCallbacks {
   onPlay(): void;
   onResume(): void;
   onRestart(): void;
+  /** On-screen Retry (touch devices). */
+  onRetry(): void;
+  /** On-screen Pause (touch devices). */
+  onPause(): void;
   /** A course was picked on the title card. */
   onPickCourse(id: string): void;
   /** Back to the title card to pick another course. */
@@ -22,11 +27,11 @@ export interface CourseChoice {
 export interface CourseInfo {
   readonly name: string;
   readonly tagline: string;
-  readonly holes: number;
 }
 
 export interface Hud {
-  update(state: GameState, holes: readonly Hole[], best: number | null): void;
+  /** `newBest` is true when the course just finished beat (or set) the best total. */
+  update(state: GameState, holes: readonly Hole[], best: number | null, newBest?: boolean): void;
   showError(message: string): void;
   setCallbacks(cb: HudCallbacks): void;
   /** The course being played: its name goes on the title card and in the HUD bar. */
@@ -63,6 +68,25 @@ function button(label: string, onClick: () => void): HTMLButtonElement {
   return b;
 }
 
+/** 0..1 power while charging (ping-pong meter) or dragging (slingshot), else null. */
+function powerOf(p: GameState['phase']): number | null {
+  if (p.kind === 'charging') return chargePower(p.t);
+  if (p.kind === 'dragging') return p.power;
+  return null;
+}
+
+const MOUSE_HINT = 'Mouse: aim · Hold click or Space: power · R: retry (+1) · Esc: menu';
+const TOUCH_HINT = 'Drag back to aim and set power · Release to putt · Drag back in to cancel';
+
+function touchControls(cb: () => HudCallbacks): HTMLDivElement {
+  const box = el('div', 'touch-controls');
+  const retry = button('Retry', () => cb().onRetry());
+  retry.setAttribute('aria-label', 'Retry from the tee (+1 stroke)');
+  const pause = button('Pause', () => cb().onPause());
+  box.append(retry, pause);
+  return box;
+}
+
 function pickerButton(c: CourseChoice, selected: boolean, onPick: (id: string) => void): HTMLButtonElement {
   const b = el('button', 'course');
   b.type = 'button';
@@ -73,23 +97,41 @@ function pickerButton(c: CourseChoice, selected: boolean, onPick: (id: string) =
   return b;
 }
 
-function row(cells: readonly string[], tag: 'td' | 'th'): HTMLTableRowElement {
+function row(cells: readonly string[], tag: 'td' | 'th', order?: number): HTMLTableRowElement {
   const r = el('tr');
   r.append(...cells.map((c) => el(tag, undefined, c)));
+  if (order !== undefined) {
+    r.classList.add('reveal');
+    r.style.setProperty('--i', String(order));
+  }
   return r;
 }
 
-function fillScorecard(table: HTMLTableElement, strokes: readonly number[], holes: readonly Hole[]): void {
+function fillScorecard(table: HTMLTableElement, strokes: readonly number[], holes: readonly Hole[], newBest: boolean): void {
   const parTotal = holes.reduce((sum, h) => sum + h.par, 0);
+  const total = row(['Total', String(parTotal), String(totalStrokes(strokes))], 'th', holes.length);
+  total.classList.add('total');
+  total.classList.toggle('best', newBest);
   table.replaceChildren(
     row(['Hole', 'Par', 'Strokes'], 'th'),
-    ...holes.map((h, i) => row([`${i + 1} ${h.name}`, String(h.par), String(strokes[i] ?? '-')], 'td')),
-    row(['Total', String(parTotal), String(totalStrokes(strokes))], 'th'),
+    ...holes.map((h, i) => row([`${i + 1} ${h.name}`, String(h.par), String(strokes[i] ?? '-')], 'td', i)),
+    total,
   );
 }
 
-export function createHud(root: HTMLElement): Hud {
-  let cb: HudCallbacks = { onPlay: () => {}, onResume: () => {}, onRestart: () => {}, onPickCourse: () => {}, onChangeCourse: () => {} };
+/** Restarts the popup's CSS pop-in by re-adding its class (a reflow in between replays the animation). */
+function pop(popup: HTMLElement, big: boolean): void {
+  popup.classList.remove('pop', 'big');
+  void popup.offsetWidth;
+  popup.classList.add('pop');
+  popup.classList.toggle('big', big);
+}
+
+export function createHud(root: HTMLElement, touch = false): Hud {
+  const noop = () => {};
+  let cb: HudCallbacks = {
+    onPlay: noop, onResume: noop, onRestart: noop, onRetry: noop, onPause: noop, onPickCourse: noop, onChangeCourse: noop,
+  };
   const course = stat('Course', 'course');
   const hole = stat('Hole', 'hole');
   const par = stat('Par', 'par');
@@ -103,17 +145,19 @@ export function createHud(root: HTMLElement): Hud {
 
   const popup = el('div', 'popup');
   popup.dataset.testid = 'popup';
-  const hint = el('div', 'hint', 'Mouse: aim · Hold click or Space: power · R: retry (+1) · Esc: menu');
+  const hint = el('div', 'hint', touch ? TOUCH_HINT : MOUSE_HINT);
+  const controls = touchControls(() => cb);
 
   const title = overlay();
   title.card.classList.add('title-card');
   title.card.style.backgroundImage = `url(${titlePanelUrl})`;
   const titleName = el('h1', undefined, 'Backyard');
-  const titleLine = el('p', undefined, 'mini-golf');
+  const subtitle = el('p');
+  let tagline = '';
   const picker = el('div', 'picker');
   picker.setAttribute('role', 'group');
   picker.setAttribute('aria-label', 'Course');
-  title.card.append(titleName, titleLine, picker, button('Play', () => cb.onPlay()));
+  title.card.append(titleName, subtitle, picker, button('Play', () => cb.onPlay()));
   const menu = overlay();
   menu.card.append(
     el('h1', undefined, 'Paused'), button('Resume', () => cb.onResume()), button('Restart course', () => cb.onRestart()),
@@ -130,30 +174,43 @@ export function createHud(root: HTMLElement): Hud {
   const errorText = el('p');
   error.card.append(errorText);
 
-  root.append(bar, power, popup, hint, title.root, menu.root, score.root, error.root);
+  root.classList.toggle('touch', touch);
+  root.append(bar, power, popup, hint, ...(touch ? [controls] : []), title.root, menu.root, score.root, error.root);
   let shownScorecard = '';
+  let shownPopup = '';
 
   return {
-    update(state, holes, best) {
+    update(state, holes, best, newBest = false) {
       const h = holes[state.holeIndex];
       const p = state.phase;
+      const sub = tagline ? `${courseSubtitle(holes.length)} · ${tagline}` : courseSubtitle(holes.length);
+      if (subtitle.textContent !== sub) subtitle.textContent = sub;
       hole.value.textContent = `${state.holeIndex + 1} · ${h.name}`;
       par.value.textContent = String(h.par);
       strokes.value.textContent = String(state.strokes[state.holeIndex] ?? 0);
-      power.classList.toggle('on', p.kind === 'charging');
-      fill.style.width = p.kind === 'charging' ? `${Math.round(chargePower(p.t) * 100)}%` : '0';
+      const pw = powerOf(p);
+      power.classList.toggle('on', pw !== null);
+      fill.style.width = pw === null ? '0' : `${Math.round(pw * 100)}%`;
+      controls.classList.toggle('on', p.kind === 'aiming' || p.kind === 'dragging' || p.kind === 'charging' || p.kind === 'rolling');
       const message = p.kind === 'holed' ? p.label : p.kind === 'intro' ? `${h.name} · Par ${h.par}` : '';
-      popup.textContent = message;
+      const popupKey = `${state.holeIndex}|${p.kind}|${message}`;
+      if (popupKey !== shownPopup) {
+        shownPopup = popupKey;
+        popup.textContent = message;
+        if (message !== '') pop(popup, p.kind === 'holed' && isCelebration(state.strokes[state.holeIndex], h.par));
+      }
       popup.classList.toggle('on', message !== '');
       title.root.classList.toggle('on', p.kind === 'title');
       menu.root.classList.toggle('on', state.paused);
       score.root.classList.toggle('on', p.kind === 'scorecard');
       if (p.kind === 'scorecard') {
-        const key = `${state.strokes.join(',')}|${best}`;
+        const key = `${state.strokes.join(',')}|${best}|${newBest}`;
         if (key !== shownScorecard) {
           shownScorecard = key;
-          fillScorecard(table, state.strokes, holes);
-          bestLine.textContent = best === null ? '' : `Best total: ${best}`;
+          fillScorecard(table, state.strokes, holes, newBest);
+          bestLine.textContent = best === null ? '' : newBest ? `New best! ${best}` : `Best total: ${best}`;
+          bestLine.className = newBest ? 'reveal new-best' : 'reveal';
+          bestLine.style.setProperty('--i', String(holes.length + 1));
         }
       }
     },
@@ -166,8 +223,8 @@ export function createHud(root: HTMLElement): Hud {
     },
     setCourse(info) {
       titleName.textContent = info.name;
-      titleLine.textContent = `${info.holes} holes · ${info.tagline}`;
       course.value.textContent = info.name;
+      tagline = info.tagline;
     },
     setPicker(choices, selected) {
       picker.replaceChildren(...choices.map((c) => pickerButton(c, c.id === selected, (id) => cb.onPickCourse(id))));

@@ -1,9 +1,8 @@
 // Usage: npm run ace-scan -- [--course <id>]
 // Counts the (angle, power) pairs that make a hole-in-one from the tee on each hole,
 // over 1° × 0.01-power steps, and prints the angle ranges that do. Used to keep aces rare.
-import { isCourseId, loadCourseDef } from '../src/world/course';
+import { courseHoles, isCourseId, loadCourseDef } from '../src/world/course';
 import { parseManifest } from '../src/world/manifest';
-import { parseHole } from '../src/world/hole';
 import { restingBall } from '../src/physics/ball';
 import { simulateShot } from '../src/physics/simulate';
 
@@ -13,8 +12,7 @@ const id = flag >= 0 ? args[flag + 1] : 'backyard';
 if (!isCourseId(id)) throw new Error(`unknown course ${id}`);
 const course = await loadCourseDef(id);
 const manifest = parseManifest(course.manifest);
-for (const { file, raw } of course.holes) {
-  const hole = parseHole(raw, manifest, file);
+for (const hole of courseHoles(course, manifest)) {
   const from = restingBall(hole, hole.tee);
   const aces: number[] = [];
   let total = 0;

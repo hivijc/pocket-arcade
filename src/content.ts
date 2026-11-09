@@ -3,10 +3,10 @@ import type { FenceColors } from './render/fences';
 import { viewFor, type View } from './render/iso';
 import { bakeLightMask, lampsOf } from './render/lights';
 import { createPalette, type Palette } from './render/palette';
-import { bakeTerrain } from './render/terrain-bake';
-import type { CourseDef } from './world/course';
+import { BACKYARD_TERRAIN, bakeTerrain, type TerrainStyle } from './render/terrain-bake';
 import { parseGolfer, type GolferLayout } from './world/golfer';
-import { parseHole, type Hole } from './world/hole';
+import { courseHoles, lazyList, type CourseDef } from './world/course';
+import type { Hole } from './world/hole';
 import { parseManifest, type Manifest } from './world/manifest';
 
 export const BUF_W = 360;
@@ -32,9 +32,13 @@ export interface Content {
   readonly manifest: Manifest;
   readonly palette: Palette;
   readonly holes: readonly Hole[];
-  readonly perHole: readonly HoleContent[];
+  /** A hole's view, terrain and light mask, baked on first use (about 45 ms) and cached. */
+  holeContent(index: number): HoleContent;
+  /** True once hole `index` has been baked. */
+  isBaked(index: number): boolean;
   readonly sprites: ReadonlyMap<string, HTMLImageElement>;
   readonly golfer: GolferArt | null;
+  /** The course's canvas backdrop and fence colours. */
   readonly background: string;
   readonly fence: FenceColors;
 }
@@ -48,19 +52,22 @@ async function loadGolfer(): Promise<GolferArt | null> {
   return { layout, image: await loadImage(url) };
 }
 
-/** Parses, bakes and loads everything one course needs. The golfer is shared by every course. */
+/** Bakes one hole in a course's terrain style (Backyard's by default, e.g. for the hole editor). */
+export function bakeHole(hole: Hole, manifest: Manifest, style: TerrainStyle = BACKYARD_TERRAIN): HoleContent {
+  const view = viewFor(hole, BUF_W, BUF_H);
+  const bake = bakeTerrain(hole, view, BUF_W, BUF_H, style);
+  return { hole, view, terrain: bakeToCanvases(bake), light: bakeLightMask(bake, view, lampsOf(hole, manifest)) };
+}
+
+/** Parses one course and loads its sprites; holes bake lazily. The golfer is shared by every course. */
 export async function loadContent(course: CourseDef): Promise<Content> {
   const manifest = parseManifest(course.manifest);
   const palette = createPalette(course.palette);
-  const holes = course.holes.map(({ file, raw }) => parseHole(raw, manifest, `${course.id}/${file}`));
-  const perHole = holes.map((hole) => {
-    const view = viewFor(hole, BUF_W, BUF_H);
-    const bake = bakeTerrain(hole, view, BUF_W, BUF_H, course.terrain);
-    return { hole, view, terrain: bakeToCanvases(bake), light: bakeLightMask(bake, view, lampsOf(hole, manifest)) };
-  });
+  const holes = courseHoles(course, manifest);
+  const baked = lazyList(holes.length, (i) => bakeHole(holes[i], manifest, course.terrain));
   const [sprites, golfer] = await Promise.all([loadSprites(manifest, course.spriteDir), loadGolfer()]);
   return {
-    course, manifest, palette, holes, perHole, sprites, golfer,
+    course, manifest, palette, holes, holeContent: baked.get, isBaked: baked.has, sprites, golfer,
     background: course.background, fence: course.terrain.fence,
   };
 }

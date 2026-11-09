@@ -6,11 +6,20 @@ import { renderFrame } from './render/renderer';
 import { PHASES, PHASE_IDS } from './render/time-of-day';
 import { courseFromSearch, loadCourseDef } from './world/course';
 
+/** `?holes=4,5` shows only those hole numbers; no parameter shows every hole. `?course=boardwalk` picks the course. */
+function wantedHoles(search: string, count: number): number[] {
+  const all = Array.from({ length: count }, (_, i) => i);
+  const param = new URLSearchParams(search).get('holes');
+  if (!param) return all;
+  const wanted = new Set(param.split(',').map((n) => Number(n) - 1));
+  return all.filter((i) => wanted.has(i));
+}
+
 async function main(): Promise<void> {
-  // debug.html?course=boardwalk shows the Boardwalk holes (default: Backyard).
   const content = await loadContent(await loadCourseDef(courseFromSearch(window.location.search)));
   const grid = document.getElementById('grid') as HTMLElement;
-  content.perHole.forEach((h, i) => {
+  wantedHoles(window.location.search, content.holes.length).forEach((i) => {
+    const h = content.holeContent(i);
     const atTee: GameState = {
       ...initialState(content.holes), holeIndex: i, phase: { kind: 'aiming' }, aim: 0,
       ball: restingBall(h.hole, h.hole.tee),

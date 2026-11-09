@@ -1,7 +1,7 @@
 import manifest from '../../../../assets/courses/boardwalk/manifest.json';
 import palette from '../../../../assets/courses/boardwalk/palette.json';
 import { parseTerrainStyle } from '../../../render/terrain-bake';
-import { holeFiles, type CourseDef } from '../../course';
+import { sortedHoleFiles, type CourseDef } from '../../course';
 
 const HOLES = import.meta.glob('./holes/*.json', { eager: true, import: 'default' });
 
@@ -25,10 +25,10 @@ export const BOARDWALK_TERRAIN = parseTerrainStyle({
 export const course: CourseDef = {
   id: 'boardwalk',
   name: 'Boardwalk',
-  tagline: 'beach at golden hour',
+  tagline: 'golden-hour beach',
   palette,
   manifest,
-  holes: holeFiles(HOLES),
+  holes: sortedHoleFiles(HOLES),
   spriteDir: 'courses/boardwalk/sprites',
   terrain: BOARDWALK_TERRAIN,
   background: '#1d3b5c',
