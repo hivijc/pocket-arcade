@@ -310,3 +310,35 @@ describe('simulateShot', () => {
     expect(simulateShot(hole, restingBall(hole, [2.5, 2.5]), 0, 1, 0.05).outcome).toBe('timeout');
   });
 });
+
+describe('walls under a slope', () => {
+  it('a ball the slope presses into a wall slides along it and stops in the corner', () => {
+    // Downhill toward -x and -y: pressed into the top wall (y = 0), pulled along it toward x = 0.
+    const hole = makeHole({ heightOf: (x, y) => 2 * x + 2 * y });
+    const r = simulateShot(hole, restingBall(hole, [15, 0.3]), 0, 0);
+    expect(r.outcome).toBe('stopped');
+    expect(r.ball.x).toBeLessThan(1);
+  });
+
+  it('a ball pinned in an acute corner stops instead of timing out', () => {
+    // A V of two walls (17° half-angle) with the slope pulling straight into its apex at (10, 8.5).
+    const hole = makeHole({
+      width: 20, depth: 10, tee: [1.5, 2.5], cup: [18.5, 0.5],
+      heightOf: (_x, y) => -4 * y,
+      walls: [[[10, 8.5], [8.25, 2.76]], [[10, 8.5], [11.75, 2.76]]],
+    });
+    const r = simulateShot(hole, restingBall(hole, [10, 5]), 0, 0);
+    expect(r.outcome).toBe('stopped');
+    expect(r.ball.y).toBeGreaterThan(7.5);
+  });
+});
+
+describe('strike with broken input', () => {
+  it('treats a NaN power or angle as no stroke', () => {
+    const hole = makeHole();
+    const ball = restingBall(hole, [2.5, 2.5]);
+    expect(strike(ball, hole, 0, Number.NaN).vx).toBe(0);
+    expect(strike(ball, hole, Number.NaN, 1).vy).toBe(0);
+    expect(simulateShot(hole, ball, 0, Number.NaN).outcome).toBe('stopped');
+  });
+});

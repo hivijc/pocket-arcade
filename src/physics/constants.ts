@@ -29,3 +29,5 @@ export const LIP_KEEP = 0.85;
 export const STOP_SPEED = 0.05;
 /** A shot that is still rolling after this long is stopped. */
 export const MAX_SIM_SECONDS = 20;
+/** Slower than this into a wall (normal speed, tiles/s) is resting contact: the push is cancelled but the slide keeps its speed. */
+export const RESTING_CONTACT_SPEED = 0.2;

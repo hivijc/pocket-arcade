@@ -2,7 +2,7 @@ import { closestPointOnSegment, type Vec2 } from '../core/geometry';
 import type { Hole, Surface } from '../world/hole';
 import {
   BALL_R, CAPTURE_SPEED, CUP_R, FRICTION, GRAVITY, LAND_KEEP, LAUNCH_DROP, LIP_DEFLECT, LIP_KEEP,
-  MAX_PUTT_SPEED, MIN_WALL_EVENT_SPEED, SLOPE_ACCEL, STEP, STOP_SPEED, WALL_KEEP,
+  MAX_PUTT_SPEED, MIN_WALL_EVENT_SPEED, RESTING_CONTACT_SPEED, SLOPE_ACCEL, STEP, STOP_SPEED, WALL_KEEP,
 } from './constants';
 import { gradientAt, heightAt, surfaceAt } from './terrain';
 
@@ -41,6 +41,7 @@ function groundRise(hole: Hole, x: number, y: number, vx: number, vy: number): n
 }
 
 export function strike(ball: Ball, hole: Hole, angle: number, power: number): Ball {
+  if (!Number.isFinite(angle) || !Number.isFinite(power)) return { ...ball, vx: 0, vy: 0, vz: 0, airborne: false };
   const s = Math.max(0, Math.min(1, power)) * MAX_PUTT_SPEED;
   const vx = Math.cos(angle) * s;
   const vy = Math.sin(angle) * s;
@@ -67,7 +68,7 @@ function rolledVelocity(b: Ball, grad: Vec2, friction: number, dt: number): Vec2
   const sx = b.vx - SLOPE_ACCEL * gx * dt;
   const sy = b.vy - SLOPE_ACCEL * gy * dt;
   const sp = Math.hypot(sx, sy);
-  if (!Number.isFinite(sp)) return [sx, sy]; // let settle treat broken values as water
+  if (!Number.isFinite(sp)) return [sx, sy]; // non-finite velocity: settle() reports it as water
   if (sp > friction * dt) {
     const keep = (sp - friction * dt) / sp;
     return [sx * keep, sy * keep];
@@ -103,11 +104,16 @@ function collide(b: Ball, hole: Hole, events: BallEvent[]): Ball {
     x = px + nx * minDist;
     y = py + ny * minDist;
     const vn = vx * nx + vy * ny;
-    if (vn < 0) {
+    if (!(vn < 0)) return; // also skips NaN, which settle() reports as water
+    hit = true;
+    if (-vn > RESTING_CONTACT_SPEED) {
       vx = (vx - 2 * vn * nx) * WALL_KEEP;
       vy = (vy - 2 * vn * ny) * WALL_KEEP;
-      hit = true;
       impact = Math.max(impact, -vn);
+    } else {
+      // Resting contact (a slope pressing the ball into the wall): cancel the push, keep the slide.
+      vx -= vn * nx;
+      vy -= vn * ny;
     }
   };
   for (const w of hole.walls) {
@@ -140,18 +146,24 @@ function contactNormals(hole: Hole, x: number, y: number): Vec2[] {
   return normals;
 }
 
-/** The slope's downhill pull at (x, y), less any part a touching wall or prop holds back. */
+/** The slope's downhill pull at (x, y), less what touching walls or props hold back. 0 when pinned. */
 function freeSlopeAccel(hole: Hole, x: number, y: number): number {
   const [gx, gy] = gradientAt(hole, x, y);
+  const normals = contactNormals(hole, x, y);
   let dx = -gx, dy = -gy;
-  for (const [nx, ny] of contactNormals(hole, x, y)) {
-    const into = dx * nx + dy * ny;
-    if (into < 0) {
-      dx -= into * nx;
-      dy -= into * ny;
+  for (let pass = 0; pass < 3; pass++) {
+    let changed = false;
+    for (const [nx, ny] of normals) {
+      const into = dx * nx + dy * ny;
+      if (into < -CONTACT_EPS) {
+        dx -= into * nx;
+        dy -= into * ny;
+        changed = true;
+      }
     }
+    if (!changed) return SLOPE_ACCEL * Math.hypot(dx, dy);
   }
-  return SLOPE_ACCEL * Math.hypot(dx, dy);
+  return 0; // contacts keep pushing the pull back into each other: the ball is pinned
 }
 
 function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
@@ -183,8 +195,7 @@ function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
     const a = -side * LIP_DEFLECT;
     [vx, vy] = [(vx * Math.cos(a) - vy * Math.sin(a)) * LIP_KEEP, (vx * Math.sin(a) + vy * Math.cos(a)) * LIP_KEEP];
   }
-  const [gx, gy] = gradientAt(hole, b.x, b.y);
-  if (entering) vz = gx * vx + gy * vy;
+  if (entering) vz = groundRise(hole, b.x, b.y, vx, vy);
   if (Math.hypot(vx, vy) < STOP_SPEED && freeSlopeAccel(hole, b.x, b.y) < frictionOf(surf)) {
     events.push('stopped');
     return { ...halt(b), z, overCup };
