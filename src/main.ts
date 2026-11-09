@@ -15,6 +15,7 @@ import { windStep } from './render/wind';
 import { createHud, type Hud } from './ui/hud';
 
 const LOAD_ERROR = "Couldn't load the Backyard — try refreshing";
+const RUNTIME_ERROR = 'Something went wrong — try refreshing';
 const PHASE_CHECK_MS = 60_000;
 
 function safeStorage(): KeyValueStore | null {
@@ -122,7 +123,7 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
       frame(dt);
     } catch (err) {
       console.error('Game loop stopped after an error:', err);
-      hud.showError(LOAD_ERROR);
+      hud.showError(RUNTIME_ERROR);
       stop();
     }
   });
