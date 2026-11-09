@@ -45,6 +45,7 @@ describe('parseStreet', () => {
     ['unknown hazard', rawStreet({ hazards: [{ kind: 'ufo', at: [1, 1] }, { kind: 'dog', home: [12, 30] }] }), /hazards\[0\]\.kind/],
     ['no dog', rawStreet({ hazards: [] }), /exactly one dog \(found 0\)/],
     ['two dogs', rawStreet({ hazards: [{ kind: 'dog', home: [12, 30] }, { kind: 'dog', home: [12, 20] }] }), /exactly one dog \(found 2\)/],
+    ['spray off the street', rawStreet({ hazards: [{ kind: 'sprinkler', at: [2, 30], spray: [-5, 28, 5, 33] }, { kind: 'dog', home: [12, 30] }] }), /hazards\[0\]\.spray is outside the street/],
     ['bundle off the street', rawStreet({ bundles: [[20, 5]] }), /bundles\[0\].*outside the street/],
   ])('rejects %s', (_label, raw, message) => {
     expect(() => parseStreet(raw)).toThrow(StreetError);

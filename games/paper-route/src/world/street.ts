@@ -71,9 +71,10 @@ function point(v: unknown, field: string, length: number): Vec2 {
   return [c, s];
 }
 
-function rect(v: unknown, field: string): Rect {
+function rect(v: unknown, field: string, length: number): Rect {
   const [c0, s0, c1, s1] = nums(v, 4, field);
   if (c1 <= c0 || s1 <= s0) throw new StreetError(`street: ${field} must have c1 > c0 and s1 > s0`);
+  if (c0 < 0 || c1 > STREET_WIDTH || s0 < 0 || s1 > length) throw new StreetError(`street: ${field} is outside the street`);
   return { c0, s0, c1, s1 };
 }
 
@@ -115,7 +116,7 @@ function parseHazards(raw: unknown, length: number): { hazards: Hazard[]; dogHom
     if (!isObj(h)) throw new StreetError(`street: ${f} must be an object`);
     if (h.kind === 'dog') dogs.push(point(h.home, `${f}.home`, length));
     else if (h.kind === 'car' || h.kind === 'puddle') hazards.push({ kind: h.kind, at: point(h.at, `${f}.at`, length) });
-    else if (h.kind === 'sprinkler') hazards.push({ kind: 'sprinkler', at: point(h.at, `${f}.at`, length), spray: rect(h.spray, `${f}.spray`) });
+    else if (h.kind === 'sprinkler') hazards.push({ kind: 'sprinkler', at: point(h.at, `${f}.at`, length), spray: rect(h.spray, `${f}.spray`, length) });
     else throw new StreetError(`street: ${f}.kind must be car, puddle, sprinkler or dog`);
   });
   if (dogs.length !== 1) throw new StreetError(`street: needs exactly one dog (found ${dogs.length})`);
