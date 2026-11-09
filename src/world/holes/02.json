@@ -32,6 +32,9 @@
   "props": [
     { "sprite": "big-gnome", "at": [10, 2] },
     { "sprite": "flowerpot", "at": [0.5, 3.5] },
-    { "sprite": "lamp", "at": [11.5, 9.5] }
+    { "sprite": "lamp", "at": [11.5, 9.5] },
+    { "sprite": "watering-can", "at": [0.5, 0.5] },
+    { "sprite": "string-light-pole", "at": [11.6, 5.4] },
+    { "sprite": "hose-reel", "at": [8.5, 9.5] }
   ]
 }

@@ -27,6 +27,11 @@
     { "sprite": "lamp", "at": [13.5, 0.5] },
     { "sprite": "flowerpot", "at": [0.5, 0.5] },
     { "sprite": "bush", "at": [0.5, 6.5] },
-    { "sprite": "gnome", "at": [9.5, 6.5] }
+    { "sprite": "gnome", "at": [9.5, 6.5] },
+    { "sprite": "tree", "at": [13.4, 6.4] },
+    { "sprite": "bird-bath", "at": [2.5, 0.5] },
+    { "sprite": "string-light-pole", "at": [5, 0.4] },
+    { "sprite": "string-light-pole", "at": [5, 6.6] },
+    { "sprite": "hose-reel", "at": [11.5, 6.4] }
   ]
 }
