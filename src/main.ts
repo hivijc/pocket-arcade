@@ -1,6 +1,7 @@
 import './style.css';
 import { BUF_H, BUF_W, loadContent, type Content } from './content';
-import { attachInput, type InputEvent } from './core/input';
+import { attachInput, isUserActivation, type InputEvent } from './core/input';
+import { dragShot } from './game/drag';
 import { createStepper, startLoop } from './core/loop';
 import { loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
@@ -14,6 +15,7 @@ import { BACKGROUND, renderFrame } from './render/renderer';
 import { PHASES, phaseFor, type PhaseId } from './render/time-of-day';
 import { windStep } from './render/wind';
 import { createHud, type Hud } from './ui/hud';
+import { canvasScale } from './ui/layout';
 
 const LOAD_ERROR = "Couldn't load the Backyard — try refreshing";
 const RUNTIME_ERROR = 'Something went wrong — try refreshing';
@@ -27,23 +29,48 @@ function safeStorage(): KeyValueStore | null {
   }
 }
 
+/** Touch-first device (phone or tablet): slingshot hints, on-screen buttons, fractional fit on small screens. */
+const isTouchDevice = (): boolean => window.matchMedia?.('(pointer: coarse)').matches ?? false;
+
 function fitCanvas(canvas: HTMLCanvasElement): void {
-  const scale = Math.max(1, Math.floor(Math.min(window.innerWidth / BUF_W, window.innerHeight / BUF_H)));
-  canvas.style.width = `${BUF_W * scale}px`;
-  canvas.style.height = `${BUF_H * scale}px`;
+  const scale = canvasScale(window.innerWidth, window.innerHeight, BUF_W, BUF_H, isTouchDevice());
+  canvas.style.width = `${Math.floor(BUF_W * scale)}px`;
+  canvas.style.height = `${Math.floor(BUF_H * scale)}px`;
 }
 
 const currentPhase = (): PhaseId => phaseFor(window.location.search, new Date().getHours());
 
-function wireInput(canvas: HTMLCanvasElement, content: Content, getState: () => GameState | null, dispatch: (a: Action) => void): void {
+/** Touch slingshot: preview the shot while dragging, drop it inside the dead zone, putt on release. */
+function slingshotAction(e: Extract<InputEvent, { type: 'drag' | 'dragEnd' | 'dragCancel' }>, state: GameState, content: Content): Action | null {
+  const dragging = state.phase.kind === 'dragging';
+  if (e.type !== 'drag') return dragging ? { type: e.type === 'dragEnd' ? 'release' : 'cancel' } : null;
+  const shot = dragShot(e.start, e.current, content.perHole[state.holeIndex].view, state.ball);
+  if (shot) return { type: 'drag', ...shot };
+  return dragging ? { type: 'cancel' } : null;
+}
+
+function toAction(e: InputEvent, state: GameState, content: Content): Action | null {
+  switch (e.type) {
+    case 'escape':
+      return { type: 'togglePause' };
+    case 'aimAt':
+      return { type: 'aimAt', point: unproject(content.perHole[state.holeIndex].view, e.sx, e.sy, state.ball.z) };
+    case 'drag':
+    case 'dragEnd':
+    case 'dragCancel':
+      return slingshotAction(e, state, content);
+    default:
+      return { type: e.type };
+  }
+}
+
+function wireInput(canvas: HTMLCanvasElement, stage: HTMLElement, content: Content, getState: () => GameState | null, dispatch: (a: Action) => void): void {
   const onInput = (e: InputEvent) => {
     const state = getState();
-    if (!state) return;
-    if (e.type === 'escape') dispatch({ type: 'togglePause' });
-    else if (e.type === 'aimAt') dispatch({ type: 'aimAt', point: unproject(content.perHole[state.holeIndex].view, e.sx, e.sy, state.ball.z) });
-    else dispatch({ type: e.type });
+    const action = state && toAction(e, state, content);
+    if (action) dispatch(action);
   };
-  attachInput(canvas, BUF_W, BUF_H, onInput);
+  attachInput(canvas, BUF_W, BUF_H, onInput, stage);
   // A release that happens while the window is unfocused never arrives: drop the charge instead.
   window.addEventListener('blur', () => dispatch({ type: 'cancel' }));
   document.addEventListener('visibilitychange', () => {
@@ -68,12 +95,18 @@ function wireAudio(isPaused: () => boolean): GameAudio {
     else if (change === 'resume') sfx.resume();
   };
   document.addEventListener('visibilitychange', sync);
-  const unlock = () => {
+  // Build the audio graph on the first press, and keep resuming it until an event the browser counts as user
+  // activation arrives: on touch that is the pointerup/touchend, not the pointerdown.
+  const kinds = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as const;
+  const unlock = (e: Event) => {
     sfx.unlock();
-    if (!playing) sfx.suspend();
+    if (playing) sfx.resume();
+    else sfx.suspend();
+    if (isUserActivation(e.type, (e as PointerEvent).pointerType)) {
+      for (const k of kinds) window.removeEventListener(k, unlock, true);
+    }
   };
-  window.addEventListener('pointerdown', unlock, { once: true });
-  window.addEventListener('keydown', unlock, { once: true });
+  for (const k of kinds) window.addEventListener(k, unlock, true);
   return { sfx, sync };
 }
 
@@ -95,7 +128,7 @@ function watchPhase(onPhase: (p: PhaseId) => void): void {
 }
 
 function frameAudio(audio: GameAudio, prevKind: GameState['phase']['kind'], state: GameState): void {
-  if (prevKind === 'charging' && state.phase.kind === 'rolling') {
+  if ((prevKind === 'charging' || prevKind === 'dragging') && state.phase.kind === 'rolling') {
     audio.sfx.putt(Math.hypot(state.ball.vx, state.ball.vy) / MAX_PUTT_SPEED);
   }
   for (const s of soundsFor(state.events)) audio.sfx.play(s);
@@ -151,13 +184,19 @@ function createFrame(d: FrameDeps): (dt: number) => void {
   };
 }
 
-function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canvas: HTMLCanvasElement): void {
+function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canvas: HTMLCanvasElement, stage: HTMLElement): void {
   let state: GameState = initialState(content.holes);
   const dispatch = (a: Action) => {
     state = reduce(state, a, content.holes);
   };
-  hud.setCallbacks({ onPlay: () => dispatch({ type: 'start' }), onResume: () => dispatch({ type: 'resume' }), onRestart: () => dispatch({ type: 'start' }) });
-  wireInput(canvas, content, () => state, dispatch);
+  hud.setCallbacks({
+    onPlay: () => dispatch({ type: 'start' }),
+    onResume: () => dispatch({ type: 'resume' }),
+    onRestart: () => dispatch({ type: 'start' }),
+    onRetry: () => dispatch({ type: 'retry' }),
+    onPause: () => dispatch({ type: 'togglePause' }),
+  });
+  wireInput(canvas, stage, content, () => state, dispatch);
 
   const audio = wireAudio(() => state.paused);
   let phase: PhaseId = currentPhase();
@@ -189,7 +228,8 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
 
 async function boot(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
-  const hud = createHud(document.getElementById('hud') as HTMLElement);
+  const stage = document.getElementById('stage') as HTMLElement;
+  const hud = createHud(document.getElementById('hud') as HTMLElement, isTouchDevice());
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) {
     console.error('2D canvas is not available');
@@ -199,7 +239,7 @@ async function boot(): Promise<void> {
   fitCanvas(canvas);
   window.addEventListener('resize', () => fitCanvas(canvas));
   try {
-    runGame(ctx, await loadContent(), hud, canvas);
+    runGame(ctx, await loadContent(), hud, canvas, stage);
   } catch (err) {
     console.error('Failed to load course data:', err);
     hud.showError(LOAD_ERROR);

@@ -7,11 +7,15 @@
 }
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; height: 100%; overflow: hidden;
+  margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none;
   background: var(--page, var(--bg)); color: var(--ink);
   font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace;
 }
-#stage { position: fixed; inset: 0; display: grid; place-items: center; }
+#stage {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  /* The whole stage takes slingshot drags: no scroll, pinch-zoom, text selection or long-press callout. */
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
 #game { display: block; image-rendering: pixelated; }
 #hud { position: fixed; inset: 0; pointer-events: none; }
 .bar {
@@ -49,3 +53,26 @@ td, th { padding: 4px 12px; text-align: left; }
 }
 .card.title-card h1 { color: var(--ink); text-shadow: 0 2px 0 #0008; }
 .card.title-card p { color: var(--ink); text-shadow: 0 2px 0 #000a, 0 0 4px #000a; font-weight: bold; }
+
+/* ---- Touch devices and small screens ---- */
+.touch-controls {
+  position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom));
+  display: none; gap: 8px; pointer-events: auto; touch-action: manipulation;
+}
+.touch-controls.on { display: flex; }
+.touch-controls button { margin: 0; min-width: 64px; min-height: 44px; padding: 10px 14px; background: var(--panel); color: var(--ink); }
+.touch-controls button:active { background: var(--accent); color: var(--bg); }
+#hud.touch .hint { right: 160px; bottom: max(14px, env(safe-area-inset-bottom)); }
+#hud.touch .power { bottom: max(72px, calc(env(safe-area-inset-bottom) + 64px)); }
+#hud button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+@media (max-width: 560px), (max-height: 460px) {
+  .bar { top: max(8px, env(safe-area-inset-top)); gap: 14px; padding: 6px 12px; max-width: calc(100vw - 16px); }
+  .stat b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat:first-child { min-width: 0; }
+  .hint { left: max(10px, env(safe-area-inset-left)); font-size: 10px; }
+  .power { width: min(240px, 60vw); }
+  .popup { font-size: 20px; white-space: nowrap; }
+  .card { min-width: 0; max-width: calc(100vw - 24px); padding: 18px 20px; }
+  .card.title-card { width: min(512px, calc(100vw - 16px), calc((100vh - 16px) * 4 / 3)); height: auto; aspect-ratio: 4 / 3; padding-top: 22%; }
+}

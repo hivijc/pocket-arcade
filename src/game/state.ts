@@ -14,6 +14,8 @@ export type Phase =
   | { readonly kind: 'intro'; readonly t: number }
   | { readonly kind: 'aiming' }
   | { readonly kind: 'charging'; readonly t: number }
+  /** Touch slingshot in progress: the aim is `GameState.aim` and power comes from the drag length. */
+  | { readonly kind: 'dragging'; readonly power: number }
   | { readonly kind: 'rolling'; readonly t: number }
   | { readonly kind: 'holed'; readonly t: number; readonly label: string }
   | { readonly kind: 'scorecard' };
@@ -47,7 +49,9 @@ export type Action =
   | { readonly type: 'resume' }
   /** Drop an in-progress charge (e.g. the window lost focus before the release arrived). */
   | { readonly type: 'cancel' }
-  | { readonly type: 'putt'; readonly angle: number; readonly power: number };
+  | { readonly type: 'putt'; readonly angle: number; readonly power: number }
+  /** Touch slingshot preview: aim and power from the current drag; `release` then putts with them. */
+  | { readonly type: 'drag'; readonly angle: number; readonly power: number };
 
 /** Power 0..1 after charging for t seconds: rises to 1, falls back to 0, repeats. */
 export function chargePower(t: number): number {
@@ -99,9 +103,25 @@ function shoot(s: GameState, angle: number, power: number, holes: readonly Hole[
   };
 }
 
-/** Charging falls back to aiming; any other phase is kept. */
+/** Charging or dragging falls back to aiming; any other phase is kept. */
 function uncharge(s: GameState): GameState {
-  return s.phase.kind === 'charging' ? { ...s, phase: { kind: 'aiming' } } : s;
+  const k = s.phase.kind;
+  return k === 'charging' || k === 'dragging' ? { ...s, phase: { kind: 'aiming' } } : s;
+}
+
+const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
+
+function drag(s: GameState, angle: number, power: number): GameState {
+  const k = s.phase.kind;
+  if (k !== 'aiming' && k !== 'dragging') return s;
+  return { ...s, aim: angle, aimPoint: null, phase: { kind: 'dragging', power: clamp01(power) } };
+}
+
+function release(s: GameState, holes: readonly Hole[]): GameState {
+  const p = s.phase;
+  if (p.kind === 'charging') return shoot(s, aimAngle(s), chargePower(p.t), holes);
+  if (p.kind === 'dragging') return shoot(s, s.aim, p.power, holes);
+  return s;
 }
 
 function togglePause(s: GameState): GameState {
@@ -127,16 +147,18 @@ function play(s: GameState, a: PlayAction, holes: readonly Hole[]): GameState {
     case 'aim':
       return { ...s, aim: a.angle, aimPoint: null };
     case 'aimAt':
-      return { ...s, aimPoint: a.point };
+      return p.kind === 'dragging' ? s : { ...s, aimPoint: a.point };
+    case 'drag':
+      return drag(s, a.angle, a.power);
     case 'press':
       if (p.kind === 'title' || p.kind === 'scorecard') return newGame(holes);
       return p.kind === 'aiming' ? { ...s, phase: { kind: 'charging', t: 0 } } : s;
     case 'release':
-      return p.kind === 'charging' ? shoot(s, aimAngle(s), chargePower(p.t), holes) : s;
+      return release(s, holes);
     case 'putt':
       return p.kind === 'aiming' ? shoot(s, a.angle, a.power, holes) : s;
     case 'retry': {
-      if (p.kind !== 'aiming' && p.kind !== 'charging') return s;
+      if (p.kind !== 'aiming' && p.kind !== 'charging' && p.kind !== 'dragging') return s;
       const hole = holes[s.holeIndex];
       return ready({ ...withStrokes(s, current(s) + 1), ball: atTee(hole), lastRest: hole.tee }, holes);
     }

@@ -59,6 +59,8 @@ describe('golferPose', () => {
   it('scrubs the backswing with the charged power', () => {
     expect(golferPose(at({ phase: { kind: 'charging', t: 1 } }), hole, anims, 0)).toMatchObject({ anim: 'backswing', frame: 5 });
     expect(golferPose(at({ phase: { kind: 'charging', t: 0 } }), hole, anims, 0)).toMatchObject({ anim: 'backswing', frame: 0 });
+    expect(golferPose(at({ phase: { kind: 'dragging', power: 1 } }), hole, anims, 0)).toMatchObject({ anim: 'backswing', frame: 5 });
+    expect(golferPose(at({ phase: { kind: 'dragging', power: 0 } }), hole, anims, 0)).toMatchObject({ anim: 'backswing', frame: 0 });
   });
   it('plays the stroke right after release, then idles while the ball rolls', () => {
     expect(golferPose(at({ phase: { kind: 'rolling', t: 0 } }), hole, anims, 0)?.anim).toBe('stroke');
