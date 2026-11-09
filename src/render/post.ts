@@ -5,7 +5,7 @@ import { gradeColor, type PhaseLook } from './time-of-day';
 export const LIGHT_BANDS = 3;
 const LAMP_TINT: RGB = [255, 214, 150];
 /** How far each band pulls a pixel from its graded colour toward its warm lamp-lit colour. */
-const BAND_STRENGTH = [0, 0.4, 0.65, 0.9] as const;
+const BAND_STRENGTH = [0, 0.5, 0.75, 0.95] as const;
 
 export interface PhaseTables {
   /** bands[b][i * 3 .. i * 3 + 2] = output RGB for palette index i under light band b. */

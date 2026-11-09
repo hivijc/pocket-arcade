@@ -90,7 +90,7 @@
       ]
     },
     "light": {
-      "radius": 2.5
+      "radius": 3.5
     }
   },
   "tree": {
@@ -159,7 +159,7 @@
       ]
     },
     "light": {
-      "radius": 2
+      "radius": 3
     }
   }
 }

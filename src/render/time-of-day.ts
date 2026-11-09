@@ -22,7 +22,7 @@ export const PHASES: Readonly<Record<PhaseId, PhaseLook>> = {
   morning: { id: 'morning', grade: { mul: [1, 0.95, 0.9], add: [14, 8, 4] }, shadow: [-0.5, 0.25], lamps: false },
   day: { id: 'day', grade: { mul: [1, 1, 1], add: [0, 0, 0] }, shadow: [0.35, 0.2], lamps: false },
   dusk: { id: 'dusk', grade: { mul: [1, 0.8, 0.72], add: [16, 0, 12] }, shadow: [0.7, 0.25], lamps: true },
-  night: { id: 'night', grade: { mul: [0.42, 0.48, 0.72], add: [8, 8, 26] }, shadow: [0.2, 0.15], lamps: true },
+  night: { id: 'night', grade: { mul: [0.62, 0.68, 0.88], add: [12, 14, 32] }, shadow: [0.2, 0.15], lamps: true },
 };
 
 export function phaseAt(hour: number): PhaseId {
