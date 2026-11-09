@@ -1,0 +1,38 @@
+{
+  "name": "Upper Deck",
+  "par": 3,
+  "size": [13, 8],
+  "height": [
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4],
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4],
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4],
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4],
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4],
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4],
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4],
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4],
+    [0, 0, 0, 0, 0, 0, 0, 2, 4, 4, 4, 4, 4, 4]
+  ],
+  "surface": [
+    "GGGGGGXXGGGGG",
+    "GGGGGGXXGGGGG",
+    "GGGGGGXXGGGGG",
+    "GGGGGGGGGGGGG",
+    "GGGGGGGGGGGGG",
+    "GGGGGGXXGGGGG",
+    "GGGGGGXXGGGGG",
+    "GGGGGGXXGGGGG"
+  ],
+  "tee": [1.5, 1],
+  "cup": [11.5, 1.5],
+  "props": [
+    { "sprite": "lamp", "at": [5.5, 0.5] },
+    { "sprite": "lamp", "at": [12.5, 7.5] },
+    { "sprite": "string-light-pole", "at": [8.4, 0.4] },
+    { "sprite": "gnome", "at": [10.5, 3.5] },
+    { "sprite": "flowerpot", "at": [0.5, 7.5] },
+    { "sprite": "bush", "at": [5.5, 7.5] },
+    { "sprite": "bird-bath", "at": [12.5, 0.5] },
+    { "sprite": "hose-reel", "at": [0.5, 4] }
+  ]
+}
