@@ -40,7 +40,7 @@ function wireInput(canvas: HTMLCanvasElement, content: Content, getState: () => 
     const state = getState();
     if (!state) return;
     if (e.type === 'escape') dispatch({ type: 'togglePause' });
-    else if (e.type === 'aimAt') dispatch({ type: 'aimAt', point: unproject(content.perHole[state.holeIndex].view, e.sx, e.sy, state.ball.z) });
+    else if (e.type === 'aimAt') dispatch({ type: 'aimAt', point: unproject(content.holeContent(state.holeIndex).view, e.sx, e.sy, state.ball.z) });
     else dispatch({ type: e.type });
   };
   attachInput(canvas, BUF_W, BUF_H, onInput);
@@ -103,6 +103,19 @@ function frameAudio(audio: GameAudio, prevKind: GameState['phase']['kind'], stat
   audio.sync();
 }
 
+/** Bakes the hole after `index` while the current hole's intro plays, so the next entry doesn't hitch. */
+function prebakeNext(content: Content, index: number): void {
+  const next = index + 1;
+  if (next >= content.holes.length || content.isBaked(next)) return;
+  window.setTimeout(() => {
+    try {
+      content.holeContent(next);
+    } catch (err) {
+      console.error(`Pre-baking hole ${next + 1} failed (it will retry on entry):`, err);
+    }
+  }, 0);
+}
+
 interface FrameDeps {
   readonly ctx: CanvasRenderingContext2D;
   readonly content: Content;
@@ -115,7 +128,7 @@ interface FrameDeps {
 
 function drawFrame(d: FrameDeps, tables: PhaseTables, state: GameState, time: number): void {
   const { ctx, content } = d;
-  const h = content.perHole[state.holeIndex];
+  const h = content.holeContent(state.holeIndex);
   const look = PHASES[d.phase()];
   const wind = windStep(time);
   renderFrame(ctx, {
@@ -142,6 +155,7 @@ function createFrame(d: FrameDeps): (dt: number) => void {
     for (let i = 0; i < n; i++) state = update(state, STEP, d.content.holes);
     d.setState(state);
     if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') best = saveBest(storage, totalStrokes(state.strokes));
+    if (state.phase.kind === 'intro' && prevKind !== 'intro') prebakeNext(d.content, state.holeIndex);
     frameAudio(d.audio, prevKind, state);
     prevKind = state.phase.kind;
     drawFrame(d, tablesFor(d.phase()), state, time);

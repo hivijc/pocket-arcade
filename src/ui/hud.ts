@@ -1,6 +1,7 @@
 import titlePanelUrl from '../../assets/ui/title-panel.png';
 import { totalStrokes } from '../game/score';
 import { chargePower, type GameState } from '../game/state';
+import { courseSubtitle } from '../world/course';
 import type { Hole } from '../world/hole';
 
 export interface HudCallbacks {
@@ -77,7 +78,8 @@ export function createHud(root: HTMLElement): Hud {
   const title = overlay();
   title.card.classList.add('title-card');
   title.card.style.backgroundImage = `url(${titlePanelUrl})`;
-  title.card.append(el('h1', undefined, 'Backyard'), el('p', undefined, '3 holes of mini-golf'), button('Play', () => cb.onPlay()));
+  const subtitle = el('p');
+  title.card.append(el('h1', undefined, 'Backyard'), subtitle, button('Play', () => cb.onPlay()));
   const menu = overlay();
   menu.card.append(el('h1', undefined, 'Paused'), button('Resume', () => cb.onResume()), button('Restart course', () => cb.onRestart()));
   const score = overlay();
@@ -95,6 +97,8 @@ export function createHud(root: HTMLElement): Hud {
     update(state, holes, best) {
       const h = holes[state.holeIndex];
       const p = state.phase;
+      const sub = courseSubtitle(holes.length);
+      if (subtitle.textContent !== sub) subtitle.textContent = sub;
       hole.value.textContent = `${state.holeIndex + 1} · ${h.name}`;
       par.value.textContent = String(h.par);
       strokes.value.textContent = String(state.strokes[state.holeIndex] ?? 0);
