@@ -3,7 +3,7 @@ import { COURSE_SOLUTIONS, SOLUTIONS } from '../fixtures/solutions';
 import './hook';
 
 test('hole 1 can be played into the cup', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/games/minigolf/');
   await page.getByRole('button', { name: 'Play' }).click();
   await page.waitForFunction(() => window.__minigolf?.getState().phase.kind === 'aiming');
 
@@ -24,7 +24,7 @@ test('hole 1 can be played into the cup', async ({ page }) => {
 
 test('the whole course can be played to the scorecard', async ({ page }) => {
   test.setTimeout(240_000);
-  await page.goto('/');
+  await page.goto('/games/minigolf/');
   await expect(page.getByText('9 holes of mini-golf')).toBeVisible();
   await page.getByRole('button', { name: 'Play' }).click();
   const lines = COURSE_SOLUTIONS.backyard.map((name) => SOLUTIONS[name]);
@@ -51,20 +51,20 @@ test('the whole course can be played to the scorecard', async ({ page }) => {
 test('shows the title card with no console errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto('/');
+  await page.goto('/games/minigolf/');
   await expect(page.getByRole('heading', { name: 'Backyard' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
 test('desktop shows no touch buttons and keeps whole-pixel scaling', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/games/minigolf/');
   await expect(page.getByRole('button', { name: 'Pause' })).toHaveCount(0);
   const width = await page.locator('#game').evaluate((c) => parseFloat((c as HTMLElement).style.width));
   expect(width % 360).toBe(0);
 });
 
 test('Backyard is the default course and the HUD names it', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/games/minigolf/');
   await expect(page.getByTestId('course-backyard')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('course')).toHaveText('Backyard');
 });
@@ -72,7 +72,7 @@ test('Backyard is the default course and the HUD names it', async ({ page }) => 
 test('the picker switches to Boardwalk and its first hole can be played', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto('/');
+  await page.goto('/games/minigolf/');
   await page.getByTestId('course-boardwalk').click();
   await page.waitForFunction(() => window.__minigolf?.getCourse() === 'boardwalk');
   await expect(page.getByRole('heading', { name: 'Boardwalk' })).toBeVisible();

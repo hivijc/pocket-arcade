@@ -21,7 +21,7 @@ async function touchDrag(page: Page, from: Point, to: Point, beforeRelease?: () 
 }
 
 async function startHole(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/games/minigolf/');
   await page.getByRole('button', { name: 'Play' }).tap();
   await page.waitForFunction(() => window.__minigolf?.getState().phase.kind === 'aiming');
 }
