@@ -170,8 +170,9 @@ function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
   const tx = hole.cup[0] - b.x, ty = hole.cup[1] - b.y;
   const overCup = Math.hypot(tx, ty) < CUP_R;
   const entering = overCup && !b.overCup;
-  // Capture is decided once per pass, on the entry step: a ball that lips out can't drop until it re-enters.
-  if (entering && sp < CAPTURE_SPEED) {
+  // Capture is decided once per pass, on the entry step: a ball that lips out can't drop until it
+  // re-enters — unless it comes (nearly) to rest still inside the cup, where it drops in.
+  if ((entering && sp < CAPTURE_SPEED) || (overCup && sp < STOP_SPEED)) {
     events.push('holed');
     return { ...halt(b), x: hole.cup[0], y: hole.cup[1], z, overCup: true };
   }

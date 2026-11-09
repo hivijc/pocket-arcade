@@ -153,6 +153,21 @@ describe('cup', () => {
     expect(events).not.toContain('lip');
   });
 
+  it('a lipped ball that slows to a near-stop inside the cup radius drops in', () => {
+    const hole = makeHole({ cup: [6.5, 2.5] });
+    const ball: Ball = { ...restingBall(hole, [6.55, 2.55]), vx: 0.02, overCup: true };
+    const r = step(ball, hole);
+    expect(r.events).toContain('holed');
+    expect([r.ball.x, r.ball.y]).toEqual([6.5, 2.5]);
+    expect(isMoving(r.ball)).toBe(false);
+  });
+
+  it('a lipped ball still moving briskly inside the cup radius is not holed', () => {
+    const hole = makeHole({ cup: [6.5, 2.5] });
+    const ball: Ball = { ...restingBall(hole, [6.45, 2.5]), vx: 1.5, overCup: true };
+    expect(step(ball, hole).events).not.toContain('holed');
+  });
+
   it('lips out when too fast', () => {
     const hole = makeHole({ cup: [6.5, 2.5] });
     const r = simulateShot(hole, restingBall(hole, [3.5, 2.5]), 0, 1);
