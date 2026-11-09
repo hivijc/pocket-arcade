@@ -8,8 +8,12 @@ export const WIND_FRAMES = 2;
 /** How far below the street its earth sides hang, tiles. */
 const SIDE_Z = -0.5;
 const FRINGE_R = 4;
-/** A chunk buffer reaches this far past its own geometry, so the fringe and sides see full neighbourhoods. */
-const PAD = 2 * FRINGE_R + 1;
+/**
+ * A chunk buffer reaches this far past its own geometry. It must cover the fringe's neighbourhood (a fringe pixel
+ * and the lawn it reads are each up to FRINGE_R out), and side-face pixels, which are owned by s - |z|, so they
+ * spill up to |SIDE_Z| * Z_PX px past the corners, plus the fringe around them.
+ */
+const PAD = Math.max(2 * FRINGE_R + 1, Math.ceil(-SIDE_Z * Z_PX) + FRINGE_R + 1);
 const KERB_HALF = 0.07;
 const DASH_HALF = 0.06;
 const ROAD_MID = (STRIPS.road[0] + STRIPS.road[1]) / 2;
