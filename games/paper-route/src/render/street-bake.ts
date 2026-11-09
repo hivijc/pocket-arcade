@@ -102,22 +102,40 @@ function shadeOf(p: PixelHit): number {
   return SHADE.lawn + ((Math.floor(p.c) + Math.floor(p.s)) % 2 === 0 ? 0.06 : -0.04); // mowing stripes
 }
 
-/** Distance (px) from each empty pixel to the nearest lawn pixel, 0 if farther than the fringe radius. */
-function fringeDistances(kind: Int8Array, w: number, h: number): Float32Array {
+interface Offset {
+  readonly dx: number;
+  readonly dy: number;
+  readonly dist: number;
+}
+
+/** Every offset within the fringe radius, nearest first, so a search can stop at its first lawn hit. */
+const FRINGE_OFFSETS: readonly Offset[] = (() => {
+  const all: Offset[] = [];
+  for (let dy = -FRINGE_R; dy <= FRINGE_R; dy++) {
+    for (let dx = -FRINGE_R; dx <= FRINGE_R; dx++) {
+      if (dx * dx + dy * dy <= FRINGE_R * FRINGE_R) all.push({ dx, dy, dist: Math.sqrt(dx * dx + dy * dy) });
+    }
+  }
+  return all.sort((p, q) => p.dist - q.dist);
+})();
+
+/** Distance (px) to the nearest lawn pixel within the fringe radius, or 0 if none. */
+function nearestLawn(kind: Int8Array, w: number, h: number, x: number, y: number): number {
+  for (const { dx, dy, dist } of FRINGE_OFFSETS) {
+    const xx = x + dx;
+    const yy = y + dy;
+    if (xx >= 0 && xx < w && yy >= 0 && yy < h && kind[yy * w + xx] === LAWN) return dist;
+  }
+  return 0;
+}
+
+/** Fringe distance for each empty pixel the chunk owns; other pixels are never painted, so they are skipped. */
+function fringeDistances(kind: Int8Array, own: Uint8Array, w: number, h: number): Float32Array {
   const out = new Float32Array(w * h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (kind[y * w + x] >= 0) continue;
-      let best = Infinity;
-      for (let dy = -FRINGE_R; dy <= FRINGE_R; dy++) {
-        const yy = y + dy;
-        if (yy < 0 || yy >= h) continue;
-        for (let dx = -FRINGE_R; dx <= FRINGE_R; dx++) {
-          const xx = x + dx;
-          if (xx >= 0 && xx < w && kind[yy * w + xx] === LAWN) best = Math.min(best, Math.hypot(dx, dy));
-        }
-      }
-      out[y * w + x] = best <= FRINGE_R ? best : 0;
+      const i = y * w + x;
+      if (own[i] && kind[i] < 0) out[i] = nearestLawn(kind, w, h, x, y);
     }
   }
   return out;
@@ -155,7 +173,7 @@ function classify(length: number, index: number, b: PixelRect): Classified {
       }
     }
   }
-  return { kind, shade, own, fringe: fringeDistances(kind, b.width, b.height) };
+  return { kind, shade, own, fringe: fringeDistances(kind, own, b.width, b.height) };
 }
 
 function colorize(b: PixelRect, k: Classified, frame: number): Uint8ClampedArray {
