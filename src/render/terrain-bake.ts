@@ -1,6 +1,7 @@
 import type { Vec2 } from '../core/geometry';
 import { heightAt } from '../physics/terrain';
 import type { Hole, Surface } from '../world/hole';
+import { classifyWall, picketPixels } from './fences';
 import { project, unproject, type View } from './iso';
 import { parseHex, type RGB } from './palette';
 
@@ -208,6 +209,19 @@ function colorize(buf: Buffers, fringe: Float32Array, frame: number): Uint8Clamp
   return out;
 }
 
+function plotFences(frames: readonly Uint8ClampedArray[], hole: Hole, view: View, width: number, height: number): void {
+  const colors = new Map<string, RGB>();
+  for (const seg of hole.walls) {
+    if (classifyWall(hole, seg) !== 'back') continue;
+    for (const p of picketPixels(hole, view, seg)) {
+      if (p.x < 0 || p.y < 0 || p.x >= width || p.y >= height) continue;
+      const c = colors.get(p.color) ?? parseHex(p.color);
+      colors.set(p.color, c);
+      for (const f of frames) put(f, p.y * width + p.x, c);
+    }
+  }
+}
+
 export function bakeTerrain(hole: Hole, view: View, width: number, height: number): TerrainBake {
   const n = width * height;
   const buf: Buffers = {
@@ -224,5 +238,6 @@ export function bakeTerrain(hole: Hole, view: View, width: number, height: numbe
   }
   const fringe = fringeDistances(buf);
   const frames = Array.from({ length: WIND_FRAMES }, (_, f) => colorize(buf, fringe, f));
+  plotFences(frames, hole, view, width, height);
   return { width, height, frames, ground: buf.ground };
 }

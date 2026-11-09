@@ -3,6 +3,7 @@ import { aimAngle, type GameState } from '../game/state';
 import { heightAt } from '../physics/terrain';
 import type { Hole } from '../world/hole';
 import type { Manifest } from '../world/manifest';
+import { classifyWall, picketPixels, wallDepth, type Px } from './fences';
 import { depthOf, project, sortByDepth, type View } from './iso';
 
 export interface Frame {
@@ -22,10 +23,9 @@ interface Drawable {
 
 const COLORS = {
   bg: '#1b2a2f', ball: '#ffffff', shadow: 'rgba(0,0,0,0.35)', cup: '#151515',
-  fence: '#efe6d2', fenceSide: '#b8ad96', shirt: '#3d6fb6', legs: '#2f3b52', skin: '#e7b98f',
+  shirt: '#3d6fb6', legs: '#2f3b52', skin: '#e7b98f',
   pole: '#dddddd', flag: '#e5483b', aim: '#ffffff', aimShadow: 'rgba(0,0,0,0.5)', propSide: 'rgba(0,0,0,0.25)',
 } as const;
-const FENCE_H = 0.3;
 const AIM_DOTS = 6;
 const AIM_SPACING = 0.3;
 
@@ -46,14 +46,26 @@ function ground(f: Frame, x: number, y: number, lift = 0): Vec2 {
   return project(f.view, x, y, heightAt(f.hole, x, y) + lift);
 }
 
+const fenceCache = new WeakMap<Hole, Drawable[]>();
+
 function walls(f: Frame): Drawable[] {
-  return f.hole.walls.map((w) => {
-    const [ax, ay] = w.a;
-    const [bx, by] = w.b;
-    const pts = [ground(f, ax, ay), ground(f, bx, by), ground(f, bx, by, FENCE_H), ground(f, ax, ay, FENCE_H)];
-    const color = ax === bx ? COLORS.fenceSide : COLORS.fence;
-    return { depth: depthOf((ax + bx) / 2, (ay + by) / 2), draw: (ctx) => poly(ctx, pts, color) };
+  const cached = fenceCache.get(f.hole);
+  if (cached) return cached;
+  const items = f.hole.walls.flatMap((seg): Drawable[] => {
+    const side = classifyWall(f.hole, seg);
+    if (side === 'back') return []; // baked into the terrain
+    const px = picketPixels(f.hole, f.view, seg);
+    return [{ depth: wallDepth(seg, side), draw: (ctx) => plotPx(ctx, px) }];
   });
+  fenceCache.set(f.hole, items);
+  return items;
+}
+
+function plotPx(ctx: CanvasRenderingContext2D, px: readonly Px[]): void {
+  for (const p of px) {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, 1, 1);
+  }
 }
 
 function props(f: Frame): Drawable[] {

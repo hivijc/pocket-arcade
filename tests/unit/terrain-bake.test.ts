@@ -71,6 +71,11 @@ describe('bakeTerrain', () => {
     for (let dy = 1; dy <= 4; dy++) for (let dx = -6; dx <= 6; dx++) if (at(0, sx + dx, sy - dy)[3] === 255) fringe++;
     expect(fringe).toBeGreaterThan(0);
   });
+  it('bakes the back fence into the terrain', () => {
+    const [sx, sy] = project(view, 2, 0, 0);
+    const c = at(0, sx, sy - 3);
+    expect([c[0], c[1], c[2]]).toEqual([0xef, 0xe6, 0xd2]);
+  });
   it('is deterministic', () => {
     expect(bakeTerrain(hole, view, 360, 270).frames[1]).toEqual(bake.frames[1]);
   });
