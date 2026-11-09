@@ -22,7 +22,7 @@
     "RRRRRRRRRRRRRR"
   ],
   "tee": [1.5, 3.5],
-  "cup": [12.5, 3.5],
+  "cup": [12.5, 1.5],
   "props": [
     { "sprite": "lamp", "at": [13.5, 0.5] },
     { "sprite": "flowerpot", "at": [0.5, 0.5] },

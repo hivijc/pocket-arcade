@@ -28,6 +28,16 @@ describe('Backyard holes', () => {
   it('hole 3 has water between the tee and the cup', () => {
     expect(holes[2].surface.some((row) => row.includes('W'))).toBe(true);
   });
+
+  it('Pool Hop has no hole-in-one straight down the lane (±6°)', () => {
+    const hole = holes[2];
+    const from = restingBall(hole, hole.tee);
+    for (let deg = -6; deg <= 6; deg += 1) {
+      for (let p = 0.5; p <= 1.0001; p += 0.02) {
+        expect(simulateShot(hole, from, (deg * Math.PI) / 180, p).outcome).not.toBe('holed');
+      }
+    }
+  });
 });
 
 describe('Backyard holes are solvable in par', () => {
