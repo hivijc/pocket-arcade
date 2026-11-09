@@ -5,7 +5,8 @@ import { carHits, dogBites, dogTakesTreat, inPuddle, inSpray, sitDog, stepDog } 
 import { hasLanded, mailboxHit, paperPos, porchHit, stepPaper, type PaperPos } from '../sim/paper';
 import type { Lot, Street } from '../world/street';
 import { deliveryPoints, finishBonus, type Delivery } from './score';
-import { emit, type GameState } from './state';
+import { emit } from './events';
+import type { GameState } from './state';
 
 type Step = (s: GameState, street: Street, dt: number) => GameState;
 
@@ -22,7 +23,9 @@ function landPaper(s: GameState, street: Street, pos: PaperPos): GameState {
   const landed = { ...s, landed: [...s.landed, [pos.c, pos.s] as const] };
   const porch = porchHit(street.lots, pos);
   if (porch) return deliver(landed, porch, 'porch');
-  if (dogTakesTreat(s.dog, pos)) return emit({ ...landed, dog: sitDog(s.dog), score: s.score + POINTS.dog }, { type: 'treat', points: POINTS.dog });
+  if (dogTakesTreat(s.dog, pos)) {
+    return emit({ ...landed, dog: sitDog(s.dog), score: s.score + POINTS.dog }, { type: 'treat', points: POINTS.dog });
+  }
   return emit(landed, { type: 'land' });
 }
 
@@ -38,7 +41,8 @@ const stepPapers: Step = (s, street, dt) =>
 const stepPickups: Step = (s, street) =>
   street.bundles.reduce<GameState>((acc, at, i) => {
     if (acc.bundlesTaken.includes(i) || distance(at, [acc.bike.c, acc.bike.s]) > BUNDLE_R + BIKE_R) return acc;
-    return emit({ ...acc, bundlesTaken: [...acc.bundlesTaken, i], papers: Math.min(PAPERS.max, acc.papers + PAPERS.bundle) }, { type: 'pickup' });
+    const papers = Math.min(PAPERS.max, acc.papers + PAPERS.bundle);
+    return emit({ ...acc, bundlesTaken: [...acc.bundlesTaken, i], papers }, { type: 'pickup' });
   }, s);
 
 const stepPuddles: Step = (s, street) => {

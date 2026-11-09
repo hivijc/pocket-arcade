@@ -4,27 +4,13 @@ import { CRASH, PAPERS, TOSS } from '../sim/constants';
 import { newDog, type Dog } from '../sim/hazards';
 import { throwPaper, type Paper } from '../sim/paper';
 import type { Side, Street } from '../world/street';
-import type { Delivery } from './score';
+import { emit, type GameEvent } from './events';
 import { tick } from './tick';
+
+export type { GameEvent } from './events';
 
 export type Phase = 'title' | 'riding' | 'over';
 export type Outcome = 'finished' | 'wiped';
-
-export type GameEvent =
-  | { readonly type: 'toss' }
-  | { readonly type: 'dry' }
-  | { readonly type: 'deliver'; readonly hit: Delivery; readonly lot: number; readonly points: number }
-  | { readonly type: 'wrong'; readonly lot: number; readonly points: number }
-  | { readonly type: 'thunk' }
-  | { readonly type: 'land' }
-  | { readonly type: 'treat'; readonly points: number }
-  | { readonly type: 'pickup' }
-  | { readonly type: 'splash' }
-  | { readonly type: 'spray' }
-  | { readonly type: 'bark' }
-  | { readonly type: 'crash' }
-  | { readonly type: 'finish'; readonly bonus: number }
-  | { readonly type: 'wiped' };
 
 export interface GameState {
   readonly phase: Phase;
@@ -71,7 +57,6 @@ export function newRun(street: Street, phase: Phase = 'riding'): GameState {
 export const initialState = (street: Street): GameState => newRun(street, 'title');
 export const isActive = (s: GameState): boolean => s.phase === 'riding' && !s.paused;
 export const clearEvents = (s: GameState): GameState => (s.events.length === 0 ? s : { ...s, events: [] });
-export const emit = (s: GameState, ...events: GameEvent[]): GameState => ({ ...s, events: [...s.events, ...events] });
 
 function toss(s: GameState, side: Side): GameState {
   if (!isActive(s) || s.bike.wobble > 0 || s.cooldown > 0) return s;
