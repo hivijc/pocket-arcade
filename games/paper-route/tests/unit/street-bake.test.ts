@@ -78,4 +78,21 @@ describe('chunks', () => {
       }
     }
   });
+  it('is deterministic', () => {
+    const a = bakeChunk(40, 1);
+    const b = bakeChunk(40, 1);
+    expect(b.frames[0]).toEqual(a.frames[0]);
+    expect(b.frames[1]).toEqual(a.frames[1]);
+  });
+  it('paints the lawn fringe past the c = 0 back edge', () => {
+    const b = bakeChunk(40, 1);
+    const rgb = (wx: number, wy: number): number[] => {
+      const i = ((wy - b.y) * b.width + (wx - b.x)) * 4;
+      return [...b.frames[0].slice(i, i + 4)];
+    };
+    expect(pixelKind(40, -257 + 0.5, 126 + 0.5)).toBeNull(); // off the street: only the fringe can paint it
+    expect(rgb(-257, 126)).toEqual([63, 107, 58, 255]);
+    expect(rgb(-256, 127)).toEqual([94, 140, 69, 255]);
+    expect(rgb(-260, 126)).toEqual([0, 0, 0, 0]); // too far from the lawn
+  });
 });
