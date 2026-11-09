@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { isMoving, restingBall, step, strike, type Ball, type BallEvent } from '../../src/physics/ball';
 import { simulateShot } from '../../src/physics/simulate';
-import { BALL_R, FRICTION, MAX_PUTT_SPEED } from '../../src/physics/constants';
+import { BALL_R, FRICTION, MAX_PUTT_SPEED, SLOPE_ACCEL } from '../../src/physics/constants';
+import { gradientAt } from '../../src/physics/terrain';
 import { makeHole } from '../helpers/makeHole';
 import { parseHole, type Hole } from '../../src/world/hole';
 import { parseManifest } from '../../src/world/manifest';
 import manifestJson from '../../assets/manifest.json';
 import hole1Json from '../../src/world/holes/01.json';
+import hole3Json from '../../src/world/holes/03.json';
 
 const speed = (b: Ball) => Math.hypot(b.vx, b.vy);
 
@@ -89,13 +91,14 @@ describe('collisions', () => {
   it('a ball the slope presses against a wall does not spam wall events', () => {
     const hole = makeHole({ width: 6, depth: 8, cup: [1.5, 0.5], heightOf: (x) => -2 * x });
     let ball: Ball = { ...restingBall(hole, [6 - BALL_R, 1]), vy: 3 };
-    let walls = 0, steps = 0;
-    for (; steps < 600 && isMoving(ball); steps++) {
+    let walls = 0, contactSteps = 0;
+    for (let i = 0; i < 600 && isMoving(ball); i++) {
       const r = step(ball, hole);
       walls += r.events.filter((e) => e === 'wall').length;
+      if (r.ball.x >= 6 - BALL_R - 1e-9) contactSteps++;
       ball = r.ball;
     }
-    expect(steps).toBeGreaterThan(60); // it really did roll along the wall
+    expect(contactSteps).toBeGreaterThan(5); // it really was pressed against the wall step after step
     expect(walls).toBeLessThanOrEqual(1);
   });
 
@@ -226,6 +229,52 @@ describe('no spurious hops', () => {
       expect(b.airborne).toBe(false);
     }
     expect(hitWall).toBe(true);
+  });
+});
+
+describe('slopes steeper than friction', () => {
+  const slopeAccel = (hole: Hole, b: Ball) => SLOPE_ACCEL * Math.hypot(...gradientAt(hole, b.x, b.y));
+
+  it('hole 3: a ball that turns back on the ramp rolls back down instead of parking', () => {
+    const hole = parseHole(hole3Json, parseManifest(manifestJson), 'holes/03.json');
+    const r = simulateShot(hole, restingBall(hole, hole.tee), 0, 0.6);
+    expect(['stopped', 'water', 'holed']).toContain(r.outcome);
+    if (r.outcome === 'stopped') {
+      expect(r.ball.x).toBeLessThan(4); // back on the flat before the ramp
+      expect(slopeAccel(hole, r.ball)).toBeLessThan(FRICTION.G);
+    }
+  });
+
+  it('a slow uphill strike onto a steep ramp rolls back and stops on the flat', () => {
+    const hole = makeHole({ heightOf: (x) => (x >= 10 ? 2 * (x - 10) : 0) });
+    const r = simulateShot(hole, restingBall(hole, [8.5, 2.5]), 0, 0.4);
+    expect(r.outcome).toBe('stopped');
+    expect(r.ball.x).toBeLessThan(10);
+    expect(slopeAccel(hole, r.ball)).toBeLessThan(FRICTION.G);
+  });
+
+  it('on a slope that is steep everywhere the ball ends against the downhill wall, never mid-slope', () => {
+    const hole = makeHole({ heightOf: (x) => 2 * x });
+    const r = simulateShot(hole, restingBall(hole, [10.5, 2.5]), 0, 0.2);
+    expect(r.outcome).toBe('stopped');
+    expect(r.ball.x).toBeCloseTo(BALL_R, 2);
+  });
+
+  it('a zero-power shot on a steep slope rolls down instead of reporting a stop where it sits', () => {
+    const hole = makeHole({ heightOf: (x) => 2 * x });
+    const r = simulateShot(hole, restingBall(hole, [10.5, 2.5]), 0, 0);
+    expect(r.outcome).toBe('stopped');
+    expect(r.ball.x).toBeCloseTo(BALL_R, 2);
+  });
+
+  it('a ball never ends a step with zero velocity where the slope beats friction', () => {
+    const hole = makeHole({ heightOf: (x) => 2 * x });
+    let b = strike(restingBall(hole, [10.5, 2.5]), hole, 0, 0.2);
+    for (let i = 0; i < 2000; i++) {
+      b = step(b, hole).ball;
+      if (b.x > 1) expect(isMoving(b)).toBe(true);
+      else break;
+    }
   });
 });
 

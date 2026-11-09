@@ -275,3 +275,13 @@ describe('time limit', () => {
     expect(s.ball.x).toBeCloseTo(4.2 + 0.5 * STEP);
   });
 });
+
+describe('steep ramps in play', () => {
+  const RAMP: Hole[] = [makeHole({ heightOf: (x) => (x >= 10 ? 2 * (x - 10) : 0), tee: [8.5, 2.5], cup: [1.5, 0.5] })];
+
+  it('a putt that turns back on a steep ramp returns to aiming off the ramp', () => {
+    const s = runUntil(reduce(aimingOn(RAMP), { type: 'putt', angle: 0, power: 0.4 }, RAMP), kind('aiming'), RAMP);
+    expect(s.ball.x).toBeLessThan(10);
+    expect(s.strokes[0]).toBe(1);
+  });
+});

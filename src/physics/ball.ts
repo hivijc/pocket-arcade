@@ -61,15 +61,28 @@ function flyStep(b: Ball, hole: Hole, dt: number, events: BallEvent[]): Ball {
   return { ...b, x, y, z: ground, vx: b.vx * LAND_KEEP, vy: b.vy * LAND_KEEP, vz: 0, airborne: false };
 }
 
-function rollStep(b: Ball, hole: Hole, dt: number): Ball {
-  const friction = frictionOf(surfaceAt(hole, b.x, b.y));
-  const [gx, gy] = gradientAt(hole, b.x, b.y);
+/** Velocity after one step of slope pull and friction. Where the slope beats friction it is never zero. */
+function rolledVelocity(b: Ball, grad: Vec2, friction: number, dt: number): Vec2 {
+  const [gx, gy] = grad;
   const sx = b.vx - SLOPE_ACCEL * gx * dt;
   const sy = b.vy - SLOPE_ACCEL * gy * dt;
   const sp = Math.hypot(sx, sy);
-  const keep = sp > 0 ? (sp - Math.min(sp, friction * dt)) / sp : 0;
-  const vx = sx * keep;
-  const vy = sy * keep;
+  if (!Number.isFinite(sp)) return [sx, sy]; // let settle treat broken values as water
+  if (sp > friction * dt) {
+    const keep = (sp - friction * dt) / sp;
+    return [sx * keep, sy * keep];
+  }
+  // Friction would zero the velocity (e.g. at an uphill turnaround). If the slope beats friction,
+  // the ball starts rolling downhill with the net acceleration instead of parking mid-slope.
+  const g = Math.hypot(gx, gy);
+  const net = SLOPE_ACCEL * g - friction;
+  if (net <= 0) return [0, 0];
+  return [(-gx / g) * net * dt, (-gy / g) * net * dt];
+}
+
+function rollStep(b: Ball, hole: Hole, dt: number): Ball {
+  const friction = frictionOf(surfaceAt(hole, b.x, b.y));
+  const [vx, vy] = rolledVelocity(b, gradientAt(hole, b.x, b.y), friction, dt);
   const x = b.x + vx * dt;
   const y = b.y + vy * dt;
   const ground = heightAt(hole, x, y);
@@ -109,6 +122,38 @@ function collide(b: Ball, hole: Hole, events: BallEvent[]): Ball {
   return { ...b, x, y, vx, vy, vz };
 }
 
+const CONTACT_EPS = 1e-6;
+
+/** Outward normals of every wall or prop the ball at (x, y) is touching. */
+function contactNormals(hole: Hole, x: number, y: number): Vec2[] {
+  const normals: Vec2[] = [];
+  const touch = (px: number, py: number, minDist: number) => {
+    const dx = x - px, dy = y - py;
+    const d = Math.hypot(dx, dy);
+    if (d > 0 && d <= minDist + CONTACT_EPS) normals.push([dx / d, dy / d]);
+  };
+  for (const w of hole.walls) {
+    const [px, py] = closestPointOnSegment([x, y], w.a, w.b);
+    touch(px, py, BALL_R);
+  }
+  for (const c of hole.circles) touch(c.c[0], c.c[1], c.r + BALL_R);
+  return normals;
+}
+
+/** The slope's downhill pull at (x, y), less any part a touching wall or prop holds back. */
+function freeSlopeAccel(hole: Hole, x: number, y: number): number {
+  const [gx, gy] = gradientAt(hole, x, y);
+  let dx = -gx, dy = -gy;
+  for (const [nx, ny] of contactNormals(hole, x, y)) {
+    const into = dx * nx + dy * ny;
+    if (into < 0) {
+      dx -= into * nx;
+      dy -= into * ny;
+    }
+  }
+  return SLOPE_ACCEL * Math.hypot(dx, dy);
+}
+
 function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
   if (![b.x, b.y, b.z, b.vx, b.vy, b.vz].every(Number.isFinite)) {
     events.push('water');
@@ -139,15 +184,20 @@ function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
   }
   const [gx, gy] = gradientAt(hole, b.x, b.y);
   if (entering) vz = gx * vx + gy * vy;
-  if (Math.hypot(vx, vy) < STOP_SPEED && SLOPE_ACCEL * Math.hypot(gx, gy) < frictionOf(surf)) {
+  if (Math.hypot(vx, vy) < STOP_SPEED && freeSlopeAccel(hole, b.x, b.y) < frictionOf(surf)) {
     events.push('stopped');
     return { ...halt(b), z, overCup };
   }
   return { ...b, z, vx, vy, vz, overCup };
 }
 
+/** True where the slope pulls harder than the surface's friction, so a ball can't rest there. */
+function slopeBeatsFriction(hole: Hole, b: Ball): boolean {
+  return freeSlopeAccel(hole, b.x, b.y) > frictionOf(surfaceAt(hole, b.x, b.y));
+}
+
 export function step(ball: Ball, hole: Hole, dt: number = STEP): StepResult {
-  if (!isMoving(ball)) return { ball, events: [] };
+  if (!isMoving(ball) && !slopeBeatsFriction(hole, ball)) return { ball, events: [] };
   const events: BallEvent[] = [];
   const moved = ball.airborne ? flyStep(ball, hole, dt, events) : rollStep(ball, hole, dt);
   const walled = collide(moved, hole, events);
