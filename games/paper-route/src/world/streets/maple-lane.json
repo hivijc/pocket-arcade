@@ -1,0 +1,53 @@
+{
+  "name": "Maple Lane",
+  "length": 140,
+  "lots": [
+    { "side": "L", "s": 12,  "house": "house-a", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 22,  "house": "house-b", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 32,  "house": "house-c", "subscriber": false, "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 42,  "house": "house-a", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 52,  "house": "house-b", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 62,  "house": "house-c", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 72,  "house": "house-a", "subscriber": false, "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 82,  "house": "house-b", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 92,  "house": "house-c", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 102, "house": "house-a", "subscriber": false, "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 112, "house": "house-b", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "L", "s": 122, "house": "house-c", "subscriber": true,  "porch": [1.5, 3, 2, 4], "mailbox": [3.6, 5] },
+    { "side": "R", "s": 12,  "house": "house-b", "subscriber": true,  "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 22,  "house": "house-c", "subscriber": false, "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 32,  "house": "house-a", "subscriber": true,  "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 42,  "house": "house-b", "subscriber": true,  "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 52,  "house": "house-c", "subscriber": false, "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 62,  "house": "house-a", "subscriber": true,  "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 72,  "house": "house-b", "subscriber": true,  "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 82,  "house": "house-c", "subscriber": false, "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 92,  "house": "house-a", "subscriber": true,  "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 102, "house": "house-b", "subscriber": false, "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 112, "house": "house-c", "subscriber": true,  "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] },
+    { "side": "R", "s": 122, "house": "house-a", "subscriber": false, "porch": [0.5, 3, 2, 4], "mailbox": [0.4, 5] }
+  ],
+  "props": [
+    { "kind": "tree",  "at": [0.6, 21.5] },
+    { "kind": "hedge", "at": [13.4, 31.5] },
+    { "kind": "tree",  "at": [0.6, 51.5] },
+    { "kind": "tree",  "at": [13.4, 61.5] },
+    { "kind": "hedge", "at": [0.6, 81.5] },
+    { "kind": "tree",  "at": [13.4, 91.5] },
+    { "kind": "tree",  "at": [0.6, 111.5] },
+    { "kind": "hedge", "at": [13.4, 121.5] }
+  ],
+  "hazards": [
+    { "kind": "car", "at": [5.6, 30] },
+    { "kind": "puddle", "at": [7, 45] },
+    { "kind": "car", "at": [8.4, 58] },
+    { "kind": "sprinkler", "at": [2, 66], "spray": [3.5, 64, 5.5, 69] },
+    { "kind": "puddle", "at": [6, 80] },
+    { "kind": "dog", "home": [12, 88] },
+    { "kind": "car", "at": [5.6, 96] },
+    { "kind": "sprinkler", "at": [12, 104], "spray": [8.5, 102, 10.5, 107] },
+    { "kind": "puddle", "at": [8, 112] },
+    { "kind": "car", "at": [8.4, 120] }
+  ],
+  "bundles": [[7, 40], [6.5, 75], [7.5, 108]]
+}
