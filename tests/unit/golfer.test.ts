@@ -60,10 +60,14 @@ describe('golferPose', () => {
     expect(golferPose(at({ phase: { kind: 'charging', t: 1 } }), hole, anims, 0)).toMatchObject({ anim: 'backswing', frame: 5 });
     expect(golferPose(at({ phase: { kind: 'charging', t: 0 } }), hole, anims, 0)).toMatchObject({ anim: 'backswing', frame: 0 });
   });
-  it('plays the stroke right after release, then hides', () => {
+  it('plays the stroke right after release, then idles while the ball rolls', () => {
     expect(golferPose(at({ phase: { kind: 'rolling', t: 0 } }), hole, anims, 0)?.anim).toBe('stroke');
     expect(golferPose(at({ phase: { kind: 'rolling', t: STROKE_SECONDS * 0.99 } }), hole, anims, 0)?.frame).toBe(5);
-    expect(golferPose(at({ phase: { kind: 'rolling', t: STROKE_SECONDS } }), hole, anims, 0)).toBeNull();
+    const s = at({ phase: { kind: 'rolling', t: STROKE_SECONDS }, aim: 0, lastRest: [3, 2.5], ball: { ...base.ball, x: 5, y: 2.5 } });
+    const p = golferPose(s, hole, anims, 0.5);
+    expect(p).toMatchObject({ anim: 'idle', frame: 3, facing: 'south-east' });
+    expect(p?.at[0]).toBeCloseTo(2.7);
+    expect(p?.at[1]).toBeCloseTo(2.5);
   });
   it('celebrates when holed and is absent on menus', () => {
     expect(golferPose(at({ phase: { kind: 'holed', t: 0.3, label: 'Par' } }), hole, anims, 0)?.anim).toBe('celebrate');

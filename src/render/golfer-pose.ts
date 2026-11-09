@@ -3,7 +3,7 @@ import { aimAngle, chargePower, type GameState } from '../game/state';
 import type { Hole } from '../world/hole';
 import { DIRS, type AnimLayout, type Dir, type GolferAnim, type GolferLayout } from '../world/golfer';
 
-/** How long the follow-through shows after release, seconds. */
+/** How long the follow-through shows after release, seconds; the golfer idles there while the ball rolls on. */
 export const STROKE_SECONDS = 0.35;
 /** How far behind the ball the golfer stands, tiles. */
 export const STANCE = 0.3;
@@ -57,6 +57,7 @@ export function golferPose(s: GameState, hole: Hole, anims: GolferLayout['anims'
     const n = anims.stroke.frames;
     return { anim: 'stroke', frame: Math.min(n - 1, Math.floor((p.t / STROKE_SECONDS) * n)), facing, at };
   }
+  if (p.kind === 'rolling') return { anim: 'idle', frame: loop(time, anims.idle), facing, at };
   if (p.kind === 'holed') return { anim: 'celebrate', frame: loop(p.t, anims.celebrate), facing, at };
   return null;
 }
