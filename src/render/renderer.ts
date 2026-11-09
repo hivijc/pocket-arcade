@@ -57,16 +57,18 @@ function walls(f: Frame): Drawable[] {
 }
 
 function props(f: Frame): Drawable[] {
-  return f.hole.props.map((p) => {
-    const { color, w, h } = f.manifest[p.sprite].placeholder;
+  return f.hole.props.flatMap((p): Drawable[] => {
+    const placeholder = f.manifest[p.sprite].placeholder;
+    if (!placeholder) return [];
+    const { color, w, h } = placeholder;
     const [sx, sy] = ground(f, p.at[0], p.at[1]);
-    return {
+    return [{
       depth: depthOf(p.at[0], p.at[1]),
       draw: (ctx) => {
         rect(ctx, sx - w / 2, sy - h, w, h, color);
         rect(ctx, sx, sy - h, Math.ceil(w / 2), h, COLORS.propSide);
       },
-    };
+    }];
   });
 }
 
