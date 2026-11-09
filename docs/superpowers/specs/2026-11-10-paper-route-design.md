@@ -271,3 +271,13 @@ buffer → post pass (palette snap + daylight grade) → whole-pixel upscale →
   in §6.
 - The game reads nothing outside its own folder, so the hub restructure can move or rename it freely.
 - Hub card text (for later): **Paper Route**, "Deliver the morning paper down Maple Lane. Mind the dog."
+
+## 12. Slice as built (deviations recorded after implementation)
+
+- **Deferred to a later plan:** driveway surface (§4), picket-fence prop (§8), multi-frame art for the paper spin, the sprinkler spray and the dog run. The renderer already supports frame strips, so these only need art.
+- **Doormat:** the subscriber doormat is drawn in code as a flat yellow decal at the centre of the porch (the target), not as part of the house sprite. House sprites are shared by subscribers and non-subscribers.
+- **Dog:** it only bites while chasing, and after one bite it trots home (one bite per chase).
+- **Riding band:** the bike is clamped to c 4.3–9.7 (spec's 4–10 minus the bike radius).
+- **Crash wobble speed:** 1.5 tiles/s, below the normal minimum of 2.
+- **Accuracy** = subscriber deliveries ÷ throws.
+- **Finish bonus:** papers still in the air count as papers left.
