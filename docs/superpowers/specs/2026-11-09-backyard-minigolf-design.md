@@ -125,15 +125,30 @@ assets/
 - **Stop:** below a minimum speed on ground that is flat enough, velocity is zeroed and the next stroke begins.
 - Tuning constants (friction, restitution, capture speed, max putt speed) live in one `physics/constants.ts`.
 
-## 8. The three Backyard holes
+## 8. The Backyard holes
 
 | # | Name | Par | Idea |
 |---|---|---|---|
 | 1 | Gnome Alley | 2 | Straight lane with a gentle slope. Teaches aim and power. |
 | 2 | Picket Bank | 3 | L-shaped hole; a garden gnome blocks the corner. Bank off the picket fence. |
 | 3 | Pool Hop | 3 | A ramp launches over the kiddie pool to a raised green, or take the long way through the rough. |
+| 4 | Bunker Guard | 3 | A sand crescent guards the cup's front; go through it slowly or round the open top and bottom. |
+| 5 | Tilted Green | 2 | The green falls toward the front; a hedge blocks the direct line, so the putt curves round it. |
+| 6 | Plank Bridge | 3 | One plank-wide bridge over the pond; the cup sits up the far bank. |
+| 7 | Upper Deck | 3 | Two tiers split by a gap; only the ramp climbs, and it kicks the ball at the crest. |
+| 8 | Gnome Maze | 4 | Fence rows make a zigzag; gnomes and a hedge turn each lane into a bank shot. |
+| 9 | Grand Finale | 3 | Off the high tee, down the slope, up the kicker and over the pond to a tilted green. |
 
-Each hole fits in the 360×270 buffer with room for the grass fringe and props (about 12×8 tiles at 32 px tile width).
+Each hole fits in the 360×270 buffer with room for the grass fringe and props (`(width + depth) × 16 ≤ 360`).
+
+Holes load from `src/world/holes/*.json` in file-name order (`import.meta.glob`); each hole's terrain and light
+mask bake on first entry and are cached, and the next hole bakes during the current hole's intro.
+
+Design tools: `npm run solve -- N` finds a par line (saved in `tests/fixtures/solutions.ts`);
+`npm run eval-hole -- N` also reports the hole-in-one share of 18,000 tee shots, or traces a given shot list.
+`editor.html` (dev only) paints surfaces, shapes corner heights, places tee, cup and props, previews every
+phase, shows `parseHole` errors, runs the solver and exports the JSON. Avoid sharp V-shaped valleys between
+two slopes steeper than friction: the ball rocks in them until the 20 s shot timeout. Give them a flat floor tile.
 
 ## 9. Rendering and look
 
