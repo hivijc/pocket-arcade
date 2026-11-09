@@ -12,8 +12,8 @@
     "image": {
       "src": "gnome.png",
       "anchor": [
-        8,
-        29
+        9,
+        25
       ]
     }
   },
@@ -26,6 +26,13 @@
       "color": "#c8463c",
       "w": 12,
       "h": 18
+    },
+    "image": {
+      "src": "big-gnome.png",
+      "anchor": [
+        9,
+        25
+      ]
     }
   },
   "flowerpot": {
@@ -37,6 +44,13 @@
       "color": "#b5653a",
       "w": 6,
       "h": 6
+    },
+    "image": {
+      "src": "flowerpot.png",
+      "anchor": [
+        9,
+        20
+      ]
     }
   },
   "bush": {
@@ -48,7 +62,15 @@
       "color": "#3f6b3a",
       "w": 14,
       "h": 12
-    }
+    },
+    "image": {
+      "src": "bush.png",
+      "anchor": [
+        10,
+        21
+      ]
+    },
+    "sway": true
   },
   "lamp": {
     "footprint": {
@@ -59,6 +81,85 @@
       "color": "#4a4a52",
       "w": 2,
       "h": 26
+    },
+    "image": {
+      "src": "lamp.png",
+      "anchor": [
+        6,
+        36
+      ]
+    },
+    "light": {
+      "radius": 2.5
+    }
+  },
+  "tree": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.35
+    },
+    "image": {
+      "src": "tree.png",
+      "anchor": [
+        14,
+        32
+      ]
+    },
+    "sway": true
+  },
+  "bird-bath": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.3
+    },
+    "image": {
+      "src": "bird-bath.png",
+      "anchor": [
+        9,
+        22
+      ]
+    }
+  },
+  "watering-can": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.2
+    },
+    "image": {
+      "src": "watering-can.png",
+      "anchor": [
+        10,
+        20
+      ]
+    }
+  },
+  "hose-reel": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.25
+    },
+    "image": {
+      "src": "hose-reel.png",
+      "anchor": [
+        8,
+        16
+      ]
+    }
+  },
+  "string-light-pole": {
+    "footprint": {
+      "kind": "circle",
+      "r": 0.1
+    },
+    "image": {
+      "src": "string-light-pole.png",
+      "anchor": [
+        6,
+        44
+      ]
+    },
+    "light": {
+      "radius": 2
     }
   }
 }
