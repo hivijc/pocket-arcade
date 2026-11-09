@@ -12,7 +12,8 @@
     "coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "solve": "vite-node scripts/solve-hole.ts",
-    "ingest": "vite-node scripts/ingest.ts"
+    "ingest": "vite-node scripts/ingest.ts",
+    "ace-scan": "vite-node scripts/ace-scan.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",

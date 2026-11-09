@@ -1,5 +1,8 @@
 // Usage:
 //   npm run ingest -- object <name> <png>   → assets/sprites/<name>.png + manifest image/anchor
+//   npm run ingest -- object <name> <png> --course boardwalk
+//                                           → assets/courses/boardwalk/sprites/<name>.png, snapped to that
+//                                             course's palette, + assets/courses/boardwalk/manifest.json
 //   npm run ingest -- ui <name> <png>       → assets/ui/<name>.png
 //   npm run ingest -- golfer <dir>          → assets/sprites/golfer.png + assets/golfer.json
 //     <dir> is an extracted PixelLab character ZIP: <dir>/<state>/animations/<anim>/<direction>/frame_NNN.png
@@ -7,12 +10,19 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
-import paletteJson from '../assets/palette.json';
-import { parsePalette } from '../src/render/palette';
+import { parsePalette, type RGB } from '../src/render/palette';
 import { DIRS, GOLFER_ANIMS, type GolferAnim } from '../src/world/golfer';
 import { bottomCenter, packRows, snapToPalette, trim, type Bitmap } from './lib/sprite-tools';
 
-const colors = parsePalette(paletteJson);
+/** Where a course's palette, manifest and sprites live; Backyard keeps the original top-level paths. */
+function courseAssets(course: string): { palette: string; manifest: string; sprites: string } {
+  if (!/^[a-z0-9-]+$/.test(course)) throw new Error(`bad course id "${course}"`);
+  const root = course === 'backyard' ? 'assets' : `assets/courses/${course}`;
+  return { palette: `${root}/palette.json`, manifest: `${root}/manifest.json`, sprites: `${root}/sprites` };
+}
+
+const paletteOf = (file: string): RGB[] => parsePalette(JSON.parse(readFileSync(file, 'utf8')));
+const colors = paletteOf('assets/palette.json');
 const FPS: Record<GolferAnim, number> = { idle: 6, backswing: 1, stroke: 12, celebrate: 8 };
 
 function readPng(file: string): Bitmap {
@@ -26,16 +36,17 @@ function writePng(file: string, b: Bitmap): void {
   writeFileSync(file, PNG.sync.write(png));
 }
 
-function ingestObject(name: string, file: string): void {
+function ingestObject(name: string, file: string, course: string): void {
   if (!/^[a-z0-9-]+$/.test(name)) throw new Error(`bad sprite name "${name}"`);
-  const bmp = trim(snapToPalette(readPng(file), colors), 1);
-  mkdirSync('assets/sprites', { recursive: true });
-  writePng(`assets/sprites/${name}.png`, bmp);
-  const manifest = JSON.parse(readFileSync('assets/manifest.json', 'utf8')) as Record<string, Record<string, unknown>>;
+  const at = courseAssets(course);
+  const bmp = trim(snapToPalette(readPng(file), paletteOf(at.palette)), 1);
+  mkdirSync(at.sprites, { recursive: true });
+  writePng(`${at.sprites}/${name}.png`, bmp);
+  const manifest = JSON.parse(readFileSync(at.manifest, 'utf8')) as Record<string, Record<string, unknown>>;
   const anchor = bottomCenter(bmp);
   manifest[name] = { ...(manifest[name] ?? {}), image: { src: `${name}.png`, anchor } };
-  writeFileSync('assets/manifest.json', `${JSON.stringify(manifest, null, 2)}\n`);
-  console.log(`object ${name}: ${bmp.width}x${bmp.height}, anchor ${anchor.join(',')}`);
+  writeFileSync(at.manifest, `${JSON.stringify(manifest, null, 2)}\n`);
+  console.log(`object ${name} (${course}): ${bmp.width}x${bmp.height}, anchor ${anchor.join(',')}`);
 }
 
 function ingestUi(name: string, file: string): void {
@@ -70,13 +81,16 @@ function ingestGolfer(dir: string): void {
   console.log(`golfer: ${rows.length} rows, cell ${sheet.cell.join('x')}, sheet ${sheet.bitmap.width}x${sheet.bitmap.height}`);
 }
 
-const [kind, a, b] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const flag = args.indexOf('--course');
+const course = flag >= 0 ? args[flag + 1] ?? '' : 'backyard';
+const [kind, a, b] = flag >= 0 ? args.filter((_, i) => i !== flag && i !== flag + 1) : args;
 try {
-  if (kind === 'object' && a && b) ingestObject(a, b);
+  if (kind === 'object' && a && b) ingestObject(a, b, course);
   else if (kind === 'ui' && a && b) ingestUi(a, b);
   else if (kind === 'golfer' && a) ingestGolfer(a);
   else {
-    console.error('Usage: npm run ingest -- object <name> <png> | ui <name> <png> | golfer <dir>');
+    console.error('Usage: npm run ingest -- object <name> <png> [--course <id>] | ui <name> <png> | golfer <dir>');
     process.exitCode = 2;
   }
 } catch (err) {
