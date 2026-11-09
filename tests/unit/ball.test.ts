@@ -86,6 +86,19 @@ describe('collisions', () => {
     throw new Error('never hit the wall');
   });
 
+  it('a ball the slope presses against a wall does not spam wall events', () => {
+    const hole = makeHole({ width: 6, depth: 8, cup: [1.5, 0.5], heightOf: (x) => -2 * x });
+    let ball: Ball = { ...restingBall(hole, [6 - BALL_R, 1]), vy: 3 };
+    let walls = 0, steps = 0;
+    for (; steps < 600 && isMoving(ball); steps++) {
+      const r = step(ball, hole);
+      walls += r.events.filter((e) => e === 'wall').length;
+      ball = r.ball;
+    }
+    expect(steps).toBeGreaterThan(60); // it really did roll along the wall
+    expect(walls).toBeLessThanOrEqual(1);
+  });
+
   it('bounces off a round prop', () => {
     const hole = makeHole({ props: [{ sprite: 'post', at: [6, 2.5] }] });
     const r = simulateShot(hole, restingBall(hole, [3, 2.5]), 0, 0.5);

@@ -26,7 +26,7 @@ export interface GameState {
   readonly lastRest: Vec2;
   /** Aim angle in radians, in grid space. */
   readonly aim: number;
-  /** Ball events from the latest update (for sounds and effects). */
+  /** Ball events since the last clearEvents (for sounds and effects); the main loop clears them once per frame. */
   readonly events: readonly BallEvent[];
   /** True while the pause menu is open: time stands still and only pause/resume/start are handled. */
   readonly paused: boolean;
@@ -139,7 +139,8 @@ function advance(s: GameState, holes: readonly Hole[]): GameState {
 function roll(s: GameState, t: number, dt: number, holes: readonly Hole[]): GameState {
   const hole = holes[s.holeIndex];
   const r = step(s.ball, hole, dt);
-  const moved: GameState = { ...s, ball: r.ball, events: r.events, phase: { kind: 'rolling', t } };
+  const events = r.events.length > 0 ? [...s.events, ...r.events] : s.events;
+  const moved: GameState = { ...s, ball: r.ball, events, phase: { kind: 'rolling', t } };
   if (r.events.includes('holed')) return finishHole(moved, holes);
   if (r.events.includes('water')) {
     return ready({ ...withStrokes(moved, current(moved) + 1), ball: restingBall(hole, moved.lastRest) }, holes);
@@ -149,21 +150,25 @@ function roll(s: GameState, t: number, dt: number, holes: readonly Hole[]): Game
   return moved;
 }
 
+/** Drops the accumulated ball events (returns the same state when there are none). */
+export function clearEvents(s: GameState): GameState {
+  return s.events.length > 0 ? { ...s, events: [] } : s;
+}
+
 /** Advance time by dt seconds. The main loop calls this with the fixed physics step. */
 export function update(s: GameState, dt: number, holes: readonly Hole[]): GameState {
   if (s.paused) return s;
-  const base = s.events.length > 0 ? { ...s, events: [] } : s;
-  const p = base.phase;
+  const p = s.phase;
   switch (p.kind) {
     case 'intro':
-      return { ...base, phase: p.t + dt >= INTRO_SECONDS ? { kind: 'aiming' } : { kind: 'intro', t: p.t + dt } };
+      return { ...s, phase: p.t + dt >= INTRO_SECONDS ? { kind: 'aiming' } : { kind: 'intro', t: p.t + dt } };
     case 'charging':
-      return { ...base, phase: { kind: 'charging', t: p.t + dt } };
+      return { ...s, phase: { kind: 'charging', t: p.t + dt } };
     case 'holed':
-      return p.t + dt >= HOLED_SECONDS ? advance(base, holes) : { ...base, phase: { ...p, t: p.t + dt } };
+      return p.t + dt >= HOLED_SECONDS ? advance(s, holes) : { ...s, phase: { ...p, t: p.t + dt } };
     case 'rolling':
-      return roll(base, p.t + dt, dt, holes);
+      return roll(s, p.t + dt, dt, holes);
     default:
-      return base;
+      return s;
   }
 }

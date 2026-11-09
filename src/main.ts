@@ -6,7 +6,7 @@ import hole3 from './world/holes/03.json';
 import { attachInput, type InputEvent } from './core/input';
 import { createStepper, startLoop } from './core/loop';
 import { loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
-import { initialState, reduce, update, type Action, type GameState } from './game/state';
+import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
 import { STEP } from './physics/constants';
 import { unproject, viewFor } from './render/iso';
 import { renderFrame } from './render/renderer';
@@ -121,6 +121,8 @@ function boot(): void {
     const i = state.holeIndex;
     renderFrame(ctx, { state, hole: holes[i], view: views[i], terrain: terrainFor(i), manifest, width: BUF_W, height: BUF_H });
     hud.update(state, holes, best);
+    // Ball events accumulate across this frame's substeps; once they've been read (Plan 2: audio), drop them.
+    state = clearEvents(state);
   });
 
   if (import.meta.env.DEV) {

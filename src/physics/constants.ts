@@ -12,6 +12,8 @@ export const GRAVITY = 6;
 export const FRICTION = { G: 1.2, R: 4, S: 9 } as const;
 /** Share of speed kept after hitting a wall or prop. */
 export const WALL_KEEP = 0.7;
+/** A wall/prop hit only reports a 'wall' event above this normal impact speed, tiles/s (bounce physics is unaffected). */
+export const MIN_WALL_EVENT_SPEED = 0.2;
 /** Share of ground speed kept on landing from a hop. */
 export const LAND_KEEP = 0.85;
 /** How much faster the ground must fall away than the ball (tiles/s) to launch a hop. */

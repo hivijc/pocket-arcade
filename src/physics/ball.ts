@@ -2,7 +2,7 @@ import { closestPointOnSegment, type Vec2 } from '../core/geometry';
 import type { Hole, Surface } from '../world/hole';
 import {
   BALL_R, CAPTURE_SPEED, CUP_R, FRICTION, GRAVITY, LAND_KEEP, LAUNCH_DROP, LIP_DEFLECT, LIP_KEEP,
-  MAX_PUTT_SPEED, SLOPE_ACCEL, STEP, STOP_SPEED, WALL_KEEP,
+  MAX_PUTT_SPEED, MIN_WALL_EVENT_SPEED, SLOPE_ACCEL, STEP, STOP_SPEED, WALL_KEEP,
 } from './constants';
 import { gradientAt, heightAt, surfaceAt } from './terrain';
 
@@ -81,7 +81,7 @@ function rollStep(b: Ball, hole: Hole, dt: number): Ball {
 }
 
 function collide(b: Ball, hole: Hole, events: BallEvent[]): Ball {
-  let x = b.x, y = b.y, vx = b.vx, vy = b.vy, hit = false;
+  let x = b.x, y = b.y, vx = b.vx, vy = b.vy, hit = false, impact = 0;
   const pushOut = (px: number, py: number, minDist: number) => {
     const dx = x - px, dy = y - py;
     const d = Math.hypot(dx, dy);
@@ -94,6 +94,7 @@ function collide(b: Ball, hole: Hole, events: BallEvent[]): Ball {
       vx = (vx - 2 * vn * nx) * WALL_KEEP;
       vy = (vy - 2 * vn * ny) * WALL_KEEP;
       hit = true;
+      impact = Math.max(impact, -vn);
     }
   };
   for (const w of hole.walls) {
@@ -101,7 +102,7 @@ function collide(b: Ball, hole: Hole, events: BallEvent[]): Ball {
     pushOut(px, py, BALL_R);
   }
   for (const c of hole.circles) pushOut(c.c[0], c.c[1], c.r + BALL_R);
-  if (hit) events.push('wall');
+  if (impact > MIN_WALL_EVENT_SPEED) events.push('wall');
   if (x === b.x && y === b.y && vx === b.vx && vy === b.vy) return b;
   // A grounded ball redirected by a wall follows the ground along its new path; an airborne one keeps its vz.
   const vz = hit && !b.airborne ? groundRise(hole, x, y, vx, vy) : b.vz;

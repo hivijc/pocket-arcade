@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  HOLED_SECONDS, INTRO_SECONDS, chargePower, initialState, reduce, update, type GameState,
+  HOLED_SECONDS, INTRO_SECONDS, chargePower, clearEvents, initialState, reduce, update, type GameState,
 } from '../../src/game/state';
 import { STEP } from '../../src/physics/constants';
 import type { Hole } from '../../src/world/hole';
@@ -184,5 +184,18 @@ describe('pause and cancel', () => {
     expect(reduce(charging(), { type: 'cancel' }, HOLES).phase.kind).toBe('aiming');
     const s = aimingOn();
     expect(reduce(s, { type: 'cancel' }, HOLES)).toBe(s);
+  });
+});
+
+describe('events', () => {
+  it('accumulate across updates until cleared', () => {
+    const walled: Hole[] = [makeHole({ width: 4, cup: [1.5, 0.5] })];
+    let s = reduce(aimingOn(walled), { type: 'putt', angle: 0, power: 0.6 }, walled);
+    s = runUntil(s, (x) => x.events.includes('wall'), walled);
+    for (let i = 0; i < 5; i++) s = update(s, STEP, walled);
+    expect(s.events).toContain('wall');
+    const cleared = clearEvents(s);
+    expect(cleared.events).toEqual([]);
+    expect(clearEvents(cleared)).toBe(cleared);
   });
 });
