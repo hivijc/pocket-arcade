@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NO_CONTROLS, type Controls } from '../../src/sim/bike';
 import { STEP } from '../../src/sim/constants';
-import { initialState, newRun, reduce, type GameEvent, type GameState } from '../../src/game/state';
+import { clearEvents, initialState, newRun, reduce, type GameEvent, type GameState } from '../../src/game/state';
 import { parseStreet, type Street } from '../../src/world/street';
 import { rawStreet } from '../helpers/make-street';
 
@@ -91,6 +91,42 @@ describe('tossing', () => {
   });
 });
 
+describe('toss edge cases', () => {
+  it('refuses a toss during the crash wobble', () => {
+    const wobbling = { ...newRun(plain), bike: { ...newRun(plain).bike, wobble: 0.5 } };
+    expect(reduce(wobbling, { type: 'toss', side: 'L' }, plain)).toBe(wobbling);
+  });
+  it('gives a thunk and no score for a mailbox on an already-hit lot', () => {
+    const s = { ...at(newRun(plain), 6, 10 - 1.23), hitLots: [0], score: 250 };
+    const r = ride(reduce(s, { type: 'toss', side: 'L' }, plain), plain, 0.7);
+    expect(r.score).toBe(250);
+    expect(count(r, 'thunk')).toBe(1);
+    expect(r.delivered).toBe(0);
+  });
+  it.each(['L', 'R'] as const)('lands a paper on plain ground (%s side)', (side) => {
+    const r = ride(reduce(at(newRun(plain), 6, 20), { type: 'toss', side }, plain), plain, 0.7);
+    expect(count(r, 'land')).toBe(1);
+    expect(r.landed).toHaveLength(1);
+    expect(r.score).toBe(0);
+  });
+});
+
+describe('events', () => {
+  it('clearEvents keeps the same object when empty and empties otherwise', () => {
+    const empty = newRun(plain);
+    expect(clearEvents(empty)).toBe(empty);
+    const noisy = reduce(empty, { type: 'toss', side: 'L' }, plain);
+    expect(noisy.events).not.toHaveLength(0);
+    const cleared = clearEvents(noisy);
+    expect(cleared.events).toEqual([]);
+    expect(cleared.papers).toBe(noisy.papers);
+  });
+  it('ignores togglePause on the title', () => {
+    const t = initialState(plain);
+    expect(reduce(t, { type: 'togglePause' }, plain)).toBe(t);
+  });
+});
+
 describe('hazards and pickups', () => {
   it('picks up a bundle once, capped at 15 papers', () => {
     const r = ride({ ...at(newRun(plain), 7, 24.5), papers: 12 }, plain, 0.5);
@@ -129,10 +165,45 @@ describe('hazards and pickups', () => {
     expect(count(near, 'bark')).toBe(1);
     const bitten = ride({ ...at(newRun(plain), 7, 25), dog: { c: 7.2, s: 25.2, mode: 'chase', timer: 0 } }, plain, STEP);
     expect(bitten.helmets).toBe(2);
+    expect(count(bitten, 'crash')).toBe(1);
+    expect(bitten.bike.wobble).toBeGreaterThan(0);
+  });
+  it('costs only one helmet per dog chase', () => {
+    const chasing = { ...at(newRun(plain), 7, 25), dog: { c: 7.2, s: 25.2, mode: 'chase' as const, timer: 0 } };
+    const r = ride(chasing, plain, 4);
+    expect(r.helmets).toBe(2);
+    expect(count(r, 'crash')).toBe(1);
+    expect(r.dog.mode).not.toBe('chase');
+  });
+});
+
+describe('crash and finish together', () => {
+  const car = (s: number) => withHazards([{ kind: 'car', at: [7, s] }]);
+  it('still finishes after a non-fatal crash', () => {
+    const street = car(plain.length - 4.5);
+    const r = ride(at(newRun(street), 7, street.length - 5.5), street, 1.5);
+    expect(count(r, 'crash')).toBe(1);
+    expect(r.helmets).toBe(2);
+    expect(r.outcome).toBe('finished');
+  });
+  it('is wiped, not finished, when a fatal crash lands on the finish tick', () => {
+    const street = car(plain.length - 4);
+    const r = ride({ ...at(newRun(street), 7, street.length - 4.01), helmets: 1 }, street, STEP);
+    expect(r.outcome).toBe('wiped');
+    expect(count(r, 'finish')).toBe(0);
+    expect(count(r, 'wiped')).toBe(1);
   });
 });
 
 describe('finish', () => {
+  it('counts papers still in the air toward the bonus', () => {
+    const s = { ...at(newRun(plain), 7, plain.length - 4.1), papers: 3, delivered: 1, hitLots: [0] };
+    const thrown = reduce(s, { type: 'toss', side: 'L' }, plain);
+    const r = ride(thrown, plain, 0.1);
+    expect(r.outcome).toBe('finished');
+    expect(r.flying.length).toBeGreaterThan(0);
+    expect(r.score).toBe(2000 + 3 * 25);
+  });
   it('ends the run near the end of the street with the finish bonus', () => {
     const s = { ...at(newRun(plain), 7, plain.length - 4.1), delivered: 1, hitLots: [0], score: 250 };
     const r = ride(s, plain, 0.2);

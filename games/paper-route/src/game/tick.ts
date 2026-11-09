@@ -64,7 +64,9 @@ function crashed(s: GameState): GameState {
 const stepDogStep: Step = (s, street, dt) => {
   const dog = stepDog(s.dog, street.dogHome, s.bike, dt);
   const next = s.dog.mode === 'home' && dog.mode === 'chase' ? emit({ ...s, dog }, { type: 'bark' }) : { ...s, dog };
-  return dogBites(dog, next.bike) && canCrash(next.bike) ? crashed(next) : next;
+  if (!dogBites(dog, next.bike) || !canCrash(next.bike)) return next;
+  // The dog is done after a bite; it heads home instead of re-biting the slowed bike.
+  return crashed({ ...next, dog: { ...next.dog, mode: 'return' } });
 };
 
 const stepCars: Step = (s, street) =>
@@ -72,7 +74,7 @@ const stepCars: Step = (s, street) =>
 
 const checkFinish: Step = (s, street) => {
   if (s.bike.s < street.length - FINISH_MARGIN) return s;
-  const bonus = finishBonus(s.delivered, street.lots.filter((l) => l.subscriber).length, s.papers);
+  const bonus = finishBonus(s.delivered, street.lots.filter((l) => l.subscriber).length, s.papers + s.flying.length);
   return emit({ ...s, phase: 'over', outcome: 'finished', score: s.score + bonus }, { type: 'finish', bonus });
 };
 
