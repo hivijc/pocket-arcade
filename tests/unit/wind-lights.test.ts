@@ -13,6 +13,8 @@ describe('wind', () => {
     expect(windStep(0)).toBe(0);
     expect(windStep(1 / 8)).toBe(1);
     expect(windStep(2 / 8)).toBe(0);
+    expect(windStep(-1 / 8)).toBe(1);
+    expect(windStep(-0.01)).toBe(1);
   });
   it('sways only on step 1, by one pixel', () => {
     expect(swayOffset(0, [3, 4])).toBe(0);

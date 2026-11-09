@@ -4,7 +4,7 @@ import type { Vec2 } from '../core/geometry';
 export const WIND_FPS = 8;
 
 export function windStep(time: number): number {
-  return Math.floor(time * WIND_FPS) % 2;
+  return ((Math.floor(time * WIND_FPS) % 2) + 2) % 2;
 }
 
 /** How far a swaying sprite's top half shifts this step; neighbouring props lean opposite ways. */
