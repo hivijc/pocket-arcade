@@ -5,7 +5,7 @@ import { createStepper, startLoop } from './core/loop';
 import { loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
 import { ambienceFor, audioTransition, rollSpeedOf, shouldPlayAudio, soundsFor } from './audio/sfx-math';
-import { createSfx } from './audio/sfx';
+import { createSfx, type Sfx } from './audio/sfx';
 import { MAX_PUTT_SPEED, STEP } from './physics/constants';
 import { unproject } from './render/iso';
 import { buildPhaseTables, postProcess, type PhaseTables } from './render/post';
@@ -50,6 +50,100 @@ function wireInput(canvas: HTMLCanvasElement, content: Content, getState: () => 
   });
 }
 
+interface GameAudio {
+  readonly sfx: Sfx;
+  /** Suspend or resume audio when the paused/hidden state has changed since the last call. */
+  sync(): void;
+}
+
+function wireAudio(isPaused: () => boolean): GameAudio {
+  const sfx = createSfx();
+  let playing = true;
+  const sync = () => {
+    const now = shouldPlayAudio(isPaused(), document.hidden);
+    const change = audioTransition(playing, now);
+    playing = now;
+    if (change === 'suspend') sfx.suspend();
+    else if (change === 'resume') sfx.resume();
+  };
+  document.addEventListener('visibilitychange', sync);
+  const unlock = () => {
+    sfx.unlock();
+    if (!playing) sfx.suspend();
+  };
+  window.addEventListener('pointerdown', unlock, { once: true });
+  window.addEventListener('keydown', unlock, { once: true });
+  return { sfx, sync };
+}
+
+/** Sets the current time-of-day phase now and on every check, reporting each to `onPhase`. */
+function watchPhase(onPhase: (p: PhaseId) => void): void {
+  const check = () => {
+    const phase = currentPhase();
+    document.body.dataset.phase = phase;
+    onPhase(phase);
+  };
+  check();
+  window.setInterval(check, PHASE_CHECK_MS);
+}
+
+function frameAudio(audio: GameAudio, prevKind: GameState['phase']['kind'], state: GameState): void {
+  if (prevKind === 'charging' && state.phase.kind === 'rolling') {
+    audio.sfx.putt(Math.hypot(state.ball.vx, state.ball.vy) / MAX_PUTT_SPEED);
+  }
+  for (const s of soundsFor(state.events)) audio.sfx.play(s);
+  audio.sfx.setRoll(rollSpeedOf(state));
+  audio.sync();
+}
+
+interface FrameDeps {
+  readonly ctx: CanvasRenderingContext2D;
+  readonly content: Content;
+  readonly hud: Hud;
+  readonly audio: GameAudio;
+  readonly phase: () => PhaseId;
+  readonly getState: () => GameState;
+  readonly setState: (s: GameState) => void;
+}
+
+function drawFrame(d: FrameDeps, tables: PhaseTables, state: GameState, time: number): void {
+  const { ctx, content } = d;
+  const h = content.perHole[state.holeIndex];
+  const look = PHASES[d.phase()];
+  const wind = windStep(time);
+  renderFrame(ctx, {
+    state, hole: h.hole, view: h.view, terrain: h.terrain[wind], manifest: content.manifest,
+    sprites: content.sprites, golfer: content.golfer, look, time, wind, width: BUF_W, height: BUF_H,
+  });
+  postProcess(ctx, BUF_W, BUF_H, content.palette.lut, tables, look.lamps ? h.light : null);
+}
+
+function createFrame(d: FrameDeps): (dt: number) => void {
+  const tables = new Map<PhaseId, PhaseTables>();
+  const tablesFor = (id: PhaseId) => tables.get(id) ?? tables.set(id, buildPhaseTables(d.content.palette, PHASES[id])).get(id)!;
+  const storage = safeStorage();
+  let best = loadBest(storage);
+  let prevKind = d.getState().phase.kind;
+  let time = 0;
+  const steps = createStepper(STEP);
+
+  return (dt: number) => {
+    // The first rAF timestamp can predate the loop's start, giving a slightly negative dt.
+    time += Math.max(0, dt);
+    const n = steps(dt);
+    let state = d.getState();
+    for (let i = 0; i < n; i++) state = update(state, STEP, d.content.holes);
+    d.setState(state);
+    if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') best = saveBest(storage, totalStrokes(state.strokes));
+    frameAudio(d.audio, prevKind, state);
+    prevKind = state.phase.kind;
+    drawFrame(d, tablesFor(d.phase()), state, time);
+    d.hud.update(state, d.content.holes, best);
+    // Ball events accumulate across this frame's substeps; once read (audio, Task 19), drop them.
+    d.setState(clearEvents(state));
+  };
+}
+
 function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canvas: HTMLCanvasElement): void {
   let state: GameState = initialState(content.holes);
   const dispatch = (a: Action) => {
@@ -58,66 +152,16 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
   hud.setCallbacks({ onPlay: () => dispatch({ type: 'start' }), onResume: () => dispatch({ type: 'resume' }), onRestart: () => dispatch({ type: 'start' }) });
   wireInput(canvas, content, () => state, dispatch);
 
-  const tables = new Map<PhaseId, PhaseTables>();
-  const tablesFor = (id: PhaseId) => tables.get(id) ?? tables.set(id, buildPhaseTables(content.palette, PHASES[id])).get(id)!;
-  let phase = currentPhase();
-  document.body.dataset.phase = phase;
+  const audio = wireAudio(() => state.paused);
+  let phase: PhaseId = currentPhase();
+  watchPhase((p) => {
+    phase = p;
+    audio.sfx.setAmbience(ambienceFor(p));
+  });
 
-  const sfx = createSfx();
-  let audioPlaying = true;
-  const syncAudio = () => {
-    const playing = shouldPlayAudio(state.paused, document.hidden);
-    const change = audioTransition(audioPlaying, playing);
-    audioPlaying = playing;
-    if (change === 'suspend') sfx.suspend();
-    else if (change === 'resume') sfx.resume();
-  };
-  document.addEventListener('visibilitychange', syncAudio);
-  const unlock = () => {
-    sfx.unlock();
-    if (!audioPlaying) sfx.suspend();
-  };
-  window.addEventListener('pointerdown', unlock, { once: true });
-  window.addEventListener('keydown', unlock, { once: true });
-  sfx.setAmbience(ambienceFor(phase));
-
-  window.setInterval(() => {
-    phase = currentPhase();
-    document.body.dataset.phase = phase;
-    sfx.setAmbience(ambienceFor(phase));
-  }, PHASE_CHECK_MS);
-
-  const storage = safeStorage();
-  let best = loadBest(storage);
-  let prevKind = state.phase.kind;
-  let time = 0;
-  const steps = createStepper(STEP);
-
-  const frame = (dt: number) => {
-    // The first rAF timestamp can predate the loop's start, giving a slightly negative dt.
-    time += Math.max(0, dt);
-    const n = steps(dt);
-    for (let i = 0; i < n; i++) state = update(state, STEP, content.holes);
-    if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') best = saveBest(storage, totalStrokes(state.strokes));
-    if (prevKind === 'charging' && state.phase.kind === 'rolling') {
-      sfx.putt(Math.hypot(state.ball.vx, state.ball.vy) / MAX_PUTT_SPEED);
-    }
-    prevKind = state.phase.kind;
-    for (const s of soundsFor(state.events)) sfx.play(s);
-    sfx.setRoll(rollSpeedOf(state));
-    syncAudio();
-    const h = content.perHole[state.holeIndex];
-    const look = PHASES[phase];
-    const wind = windStep(time);
-    renderFrame(ctx, {
-      state, hole: h.hole, view: h.view, terrain: h.terrain[wind], manifest: content.manifest,
-      sprites: content.sprites, golfer: content.golfer, look, time, wind, width: BUF_W, height: BUF_H,
-    });
-    postProcess(ctx, BUF_W, BUF_H, content.palette.lut, tablesFor(phase), look.lamps ? h.light : null);
-    hud.update(state, content.holes, best);
-    // Ball events accumulate across this frame's substeps; once read (audio, Task 19), drop them.
-    state = clearEvents(state);
-  };
+  const frame = createFrame({
+    ctx, content, hud, audio, phase: () => phase, getState: () => state, setState: (s) => { state = s; },
+  });
   const stop = startLoop((dt) => {
     try {
       frame(dt);
