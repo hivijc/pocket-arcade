@@ -8,7 +8,7 @@
 * { box-sizing: border-box; }
 html, body {
   margin: 0; height: 100%; overflow: hidden;
-  background: var(--bg); color: var(--ink);
+  background: var(--page, var(--bg)); color: var(--ink);
   font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace;
 }
 #stage { position: fixed; inset: 0; display: grid; place-items: center; }
@@ -42,10 +42,6 @@ button {
 }
 table { border-collapse: collapse; margin: 12px auto; }
 td, th { padding: 4px 12px; text-align: left; }
-body[data-phase="morning"] { --bg: #2c2c3a; }
-body[data-phase="day"] { --bg: #2c2c3a; }
-body[data-phase="dusk"] { --bg: #2a2450; }
-body[data-phase="night"] { --bg: #14141c; }
 .card.title-card {
   width: 512px; height: 384px; padding-top: 120px;
   background: transparent center / contain no-repeat;

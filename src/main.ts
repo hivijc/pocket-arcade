@@ -8,8 +8,9 @@ import { audioTransition, rollSpeedOf, shouldPlayAudio, soundsFor } from './audi
 import { createSfx, type Sfx } from './audio/sfx';
 import { MAX_PUTT_SPEED, STEP } from './physics/constants';
 import { unproject } from './render/iso';
-import { buildPhaseTables, postProcess, type PhaseTables } from './render/post';
-import { renderFrame } from './render/renderer';
+import { parseHex } from './render/palette';
+import { buildPhaseTables, postColor, postProcess, type PhaseTables } from './render/post';
+import { BACKGROUND, renderFrame } from './render/renderer';
 import { PHASES, phaseFor, type PhaseId } from './render/time-of-day';
 import { windStep } from './render/wind';
 import { createHud, type Hud } from './ui/hud';
@@ -74,6 +75,12 @@ function wireAudio(isPaused: () => boolean): GameAudio {
   window.addEventListener('pointerdown', unlock, { once: true });
   window.addEventListener('keydown', unlock, { once: true });
   return { sfx, sync };
+}
+
+/** Paints the page in the canvas backdrop's exact on-screen colour, so the game sits on one seamless background. */
+function matchPageToCanvas(content: Content, phase: PhaseId): void {
+  const [r, g, b] = postColor(content.palette, buildPhaseTables(content.palette, PHASES[phase]), parseHex(BACKGROUND));
+  document.body.style.setProperty('--page', `rgb(${r},${g},${b})`);
 }
 
 /** Sets the current time-of-day phase now and on every check, reporting each to `onPhase`. */
@@ -156,6 +163,7 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
   let phase: PhaseId = currentPhase();
   watchPhase((p) => {
     phase = p;
+    matchPageToCanvas(content, p);
   });
 
   const frame = createFrame({

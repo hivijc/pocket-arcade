@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import paletteJson from '../../assets/palette.json';
 import { createPalette, type RGB } from '../../src/render/palette';
-import { LIGHT_BANDS, applyPost, buildPhaseTables } from '../../src/render/post';
+import { LIGHT_BANDS, applyPost, buildPhaseTables, postColor } from '../../src/render/post';
 import { PHASES } from '../../src/render/time-of-day';
 
 const palette = createPalette(paletteJson);
@@ -20,6 +20,16 @@ describe('buildPhaseTables', () => {
   it('lit bands are palette colours', () => {
     const t = buildPhaseTables(palette, PHASES.night).bands[3];
     for (let i = 0; i < palette.colors.length; i++) expect(inPalette([t[i * 3], t[i * 3 + 1], t[i * 3 + 2]])).toBe(true);
+  });
+});
+
+describe('postColor', () => {
+  it('is what the post pass turns a colour into, so the page can match the canvas', () => {
+    const night = buildPhaseTables(palette, PHASES.night);
+    const a = px([44, 44, 58]);
+    applyPost(a, palette.lut, night, null);
+    expect(postColor(palette, night, [44, 44, 58])).toEqual(rgbAt(a, 0));
+    expect(postColor(palette, buildPhaseTables(palette, PHASES.day), [44, 44, 58])).toEqual([44, 44, 58]);
   });
 });
 

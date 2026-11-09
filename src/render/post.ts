@@ -36,6 +36,13 @@ export function buildPhaseTables(palette: Palette, look: PhaseLook): PhaseTables
   return { bands };
 }
 
+/** The unlit colour the post pass turns `c` into, e.g. so the page background can match the canvas's. */
+export function postColor(palette: Palette, tables: PhaseTables, c: RGB): RGB {
+  const i = lutIndex(palette.lut, c[0], c[1], c[2]) * 3;
+  const t = tables.bands[0];
+  return [t[i], t[i + 1], t[i + 2]];
+}
+
 /**
  * Snaps every pixel to the palette and applies the phase look, IN PLACE (per-frame buffer; documented
  * exception to the immutability rule). `light` holds a band 0..LIGHT_BANDS per pixel, or null for none.

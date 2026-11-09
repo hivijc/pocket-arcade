@@ -31,8 +31,11 @@ interface Drawable {
   draw(ctx: CanvasRenderingContext2D): void;
 }
 
+/** The canvas backdrop behind the island; the page background is set to its post-processed colour. */
+export const BACKGROUND = '#2c2c3a';
+
 const COLORS = {
-  bg: '#2c2c3a', ball: '#fffaf0', cup: '#14141c', shadow: 'rgba(20,20,28,0.35)',
+  bg: BACKGROUND, ball: '#fffaf0', cup: '#14141c', shadow: 'rgba(20,20,28,0.35)',
   pole: '#efe6d2', flag: '#c8463c', aim: '#fffaf0', aimShadow: 'rgba(20,20,28,0.6)',
   shirt: '#2f6f9a', legs: '#4a3b2e', skin: '#e7b98f', propSide: 'rgba(20,20,28,0.25)',
 } as const;
