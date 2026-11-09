@@ -5,6 +5,9 @@ import hole2 from '../../src/world/holes/02.json';
 import hole3 from '../../src/world/holes/03.json';
 import { parseManifest } from '../../src/world/manifest';
 import { parseHole } from '../../src/world/hole';
+import { restingBall } from '../../src/physics/ball';
+import { simulateShot } from '../../src/physics/simulate';
+import { SOLUTIONS } from '../fixtures/solutions';
 
 const manifest = parseManifest(manifestJson);
 const holes = [hole1, hole2, hole3].map((raw, i) => parseHole(raw, manifest, `holes/0${i + 1}.json`));
@@ -24,5 +27,20 @@ describe('Backyard holes', () => {
 
   it('hole 3 has water between the tee and the cup', () => {
     expect(holes[2].surface.some((row) => row.includes('W'))).toBe(true);
+  });
+});
+
+describe('Backyard holes are solvable in par', () => {
+  it.each(holes.map((h) => [h.name, h] as const))('%s', (_name, hole) => {
+    const shots = SOLUTIONS[hole.name];
+    expect(shots.length).toBeLessThanOrEqual(hole.par);
+    let ball = restingBall(hole, hole.tee);
+    let outcome = '';
+    for (const [deg, power] of shots) {
+      const r = simulateShot(hole, ball, (deg * Math.PI) / 180, power);
+      ball = r.ball;
+      outcome = r.outcome;
+    }
+    expect(outcome).toBe('holed');
   });
 });
