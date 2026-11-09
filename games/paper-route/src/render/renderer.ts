@@ -13,6 +13,8 @@ export const BACKGROUND = '#9fd8ee';
 const OUTLINE = '#14141c';
 const SHADOW = 'rgba(20, 20, 28, 0.35)';
 const MISSING = { color: '#ff00ff', w: 6, h: 6 };
+/** Sprite names already warned about. An intentional mutable cache: each unknown name warns once, not every frame. */
+const warnedMissing = new Set<string>();
 /** How far from the lawn's outer edge a house stands, tiles, so its porch sits between it and the street. */
 const HOUSE_INSET = 1;
 
@@ -56,6 +58,10 @@ function drawSprite(ctx: CanvasRenderingContext2D, scene: Scene, view: View, nam
     const f = (frame ?? Math.floor(scene.time * fps)) % frames;
     ctx.drawImage(img, f * cw, 0, cw, img.height, px - anchor[0], py - anchor[1], cw, img.height);
     return;
+  }
+  if (!def && !warnedMissing.has(name)) {
+    warnedMissing.add(name);
+    console.warn(`renderer: no manifest entry for sprite "${name}"; drawing the MISSING box`);
   }
   const ph = def?.placeholder ?? MISSING;
   const x = Math.round(px - ph.w / 2);
