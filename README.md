@@ -8,29 +8,45 @@ Every push to `main` rebuilds and redeploys the site through GitHub Actions.
 
 ## Games
 
-- **Backyard Mini-Golf**: isometric pixel-art mini-golf. Currently served at the site root.
-- **Paper Route**: a daytime bike game. Coming soon.
-
-## Plan: hub + games
-
-The site root will become a hub page with a card for each game, and each game
-will move to its own path:
+The site root is the hub, a page of game cards. Each game lives at its own path:
 
 ```
-https://hivijc.github.io/pocket-arcade/            hub (game cards)
-https://hivijc.github.io/pocket-arcade/minigolf/   Backyard Mini-Golf
-https://hivijc.github.io/pocket-arcade/paper-route/ Paper Route
+https://hivijc.github.io/pocket-arcade/                    hub (game cards)
+https://hivijc.github.io/pocket-arcade/games/minigolf/     Backyard Mini-Golf
+https://hivijc.github.io/pocket-arcade/games/paper-route/  Paper Route
 ```
 
-The build is ready for this. `vite.config.ts` uses a relative `base: './'`, so
-a game's build works under any subpath. The deploy workflow publishes whatever
-ends up in `dist/`. The restructure (a hub page, each game built into
-`dist/<game>/`) happens after the parallel feature branches are merged into
-`main`. Until then, mini-golf stays at the root.
+- **Backyard Mini-Golf**: isometric pixel-art mini-golf, 2 courses and 12 holes.
+  Entry: `games/minigolf/index.html`; code in `src/`, art in `assets/`.
+  Add `?phase=night` (or `morning`, `day`, `dusk`) to force a time of day and
+  `?course=boardwalk` to open a course, e.g. `/games/minigolf/?phase=night`.
+- **Paper Route**: a daytime bike paper-delivery game, self-contained in
+  `games/paper-route/`.
 
-When adding a game, load assets through Vite imports (`import` or
-`import.meta.glob` with `?url`). A hard-coded absolute path like `/assets/...`
-breaks under the subpath.
+The hub is a plain HTML page (`index.html` + `src/hub/hub.css`). Its card
+thumbnails are real 320x200 captures of each game's first frame, kept in
+`public/hub/` and copied into the build as-is. Every game page carries a small
+"← Pocket Arcade" link back to the hub.
+
+`debug.html` and `editor.html` are mini-golf dev tools; they run under
+`npm run dev` and are left out of the build.
+
+## Adding a game
+
+1. Put it in `games/<id>/` with its own `index.html`.
+2. Add that page to `build.rollupOptions.input` in `vite.config.ts`.
+3. Add a card to the hub `index.html`, with a 320x200 thumbnail in `public/hub/`.
+4. Add the `← Pocket Arcade` link (`href="../../"`) to the game page.
+
+`vite.config.ts` uses a relative `base: './'`, so the build works under any
+subpath. Load assets through Vite imports (`import` or `import.meta.glob` with
+`?url`); a hard-coded absolute path like `/assets/...` breaks under the subpath.
+To check the subpath locally:
+
+```bash
+npm run build
+npx vite preview --base /pocket-arcade/
+```
 
 ## Develop
 
