@@ -1,5 +1,6 @@
 import type { Vec2 } from '../core/geometry';
 import { aimAngle, chargePower, type GameState } from '../game/state';
+import type { Hole } from '../world/hole';
 import { DIRS, type AnimLayout, type Dir, type GolferAnim, type GolferLayout } from '../world/golfer';
 
 /** How long the follow-through shows after release, seconds. */
@@ -23,19 +24,34 @@ export function screenDir(gridAngle: number): Dir {
   return DIRS[((k % 8) + 8) % 8];
 }
 
-const behind = (p: Vec2, angle: number): Vec2 => [p[0] - Math.cos(angle) * STANCE, p[1] - Math.sin(angle) * STANCE];
+const along = (p: Vec2, angle: number, d: number): Vec2 => [p[0] + Math.cos(angle) * d, p[1] + Math.sin(angle) * d];
+
+/** True when a point lies on a play tile: inside the grid and not an 'X'. */
+function onCourse(hole: Hole, p: Vec2): boolean {
+  const x = Math.floor(p[0]), y = Math.floor(p[1]);
+  if (x < 0 || y < 0 || x >= hole.width || y >= hole.depth) return false;
+  return hole.surface[y][x] !== 'X';
+}
+
+/** Where the golfer stands: behind the ball if that's on the course, else in front, else on the ball itself. */
+function stance(hole: Hole, ball: Vec2, angle: number): Vec2 {
+  const back = along(ball, angle, -STANCE);
+  if (onCourse(hole, back)) return back;
+  const front = along(ball, angle, STANCE);
+  return onCourse(hole, front) ? front : ball;
+}
 const loop = (t: number, a: AnimLayout): number => Math.floor(t * a.fps) % a.frames;
 
-export function golferPose(s: GameState, anims: GolferLayout['anims'], time: number): GolferPose | null {
+export function golferPose(s: GameState, hole: Hole, anims: GolferLayout['anims'], time: number): GolferPose | null {
   const p = s.phase;
   if (p.kind === 'aiming' || p.kind === 'charging') {
     const aim = aimAngle(s);
-    const at = behind([s.ball.x, s.ball.y], aim);
+    const at = stance(hole, [s.ball.x, s.ball.y], aim);
     const facing = screenDir(aim);
     if (p.kind === 'aiming') return { anim: 'idle', frame: loop(time, anims.idle), facing, at };
     return { anim: 'backswing', frame: Math.round(chargePower(p.t) * (anims.backswing.frames - 1)), facing, at };
   }
-  const at = behind(s.lastRest, s.aim);
+  const at = stance(hole, s.lastRest, s.aim);
   const facing = screenDir(s.aim);
   if (p.kind === 'rolling' && p.t < STROKE_SECONDS) {
     const n = anims.stroke.frames;

@@ -149,7 +149,7 @@ function drawGolfer(ctx: CanvasRenderingContext2D, f: Frame, pose: GolferPose, s
 }
 
 function golfer(f: Frame): Drawable[] {
-  const pose = golferPose(f.state, f.golfer?.layout.anims ?? PLACEHOLDER_ANIMS, f.time);
+  const pose = golferPose(f.state, f.hole, f.golfer?.layout.anims ?? PLACEHOLDER_ANIMS, f.time);
   if (!pose) return [];
   const [sx, sy] = ground(f, pose.at[0], pose.at[1]);
   return [{ depth: depthOf(pose.at[0], pose.at[1]), draw: (ctx) => drawGolfer(ctx, f, pose, sx, sy) }];
