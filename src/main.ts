@@ -4,7 +4,9 @@ import { attachInput, type InputEvent } from './core/input';
 import { createStepper, startLoop } from './core/loop';
 import { loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
-import { STEP } from './physics/constants';
+import { ambienceFor, soundsFor } from './audio/sfx-math';
+import { createSfx } from './audio/sfx';
+import { MAX_PUTT_SPEED, STEP } from './physics/constants';
 import { unproject } from './render/iso';
 import { buildPhaseTables, postProcess, type PhaseTables } from './render/post';
 import { renderFrame } from './render/renderer';
@@ -59,9 +61,17 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
   const tablesFor = (id: PhaseId) => tables.get(id) ?? tables.set(id, buildPhaseTables(content.palette, PHASES[id])).get(id)!;
   let phase = currentPhase();
   document.body.dataset.phase = phase;
+
+  const sfx = createSfx();
+  const unlock = () => sfx.unlock();
+  window.addEventListener('pointerdown', unlock, { once: true });
+  window.addEventListener('keydown', unlock, { once: true });
+  sfx.setAmbience(ambienceFor(phase));
+
   window.setInterval(() => {
     phase = currentPhase();
     document.body.dataset.phase = phase;
+    sfx.setAmbience(ambienceFor(phase));
   }, PHASE_CHECK_MS);
 
   const storage = safeStorage();
@@ -76,7 +86,12 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canv
     const n = steps(dt);
     for (let i = 0; i < n; i++) state = update(state, STEP, content.holes);
     if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') best = saveBest(storage, totalStrokes(state.strokes));
+    if (prevKind === 'charging' && state.phase.kind === 'rolling') {
+      sfx.putt(Math.hypot(state.ball.vx, state.ball.vy) / MAX_PUTT_SPEED);
+    }
     prevKind = state.phase.kind;
+    for (const s of soundsFor(state.events)) sfx.play(s);
+    sfx.setRoll(state.phase.kind === 'rolling' && !state.ball.airborne ? Math.hypot(state.ball.vx, state.ball.vy) : 0);
     const h = content.perHole[state.holeIndex];
     const look = PHASES[phase];
     const wind = windStep(time);
