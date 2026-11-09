@@ -1,0 +1,10 @@
+:root { --bg: #9fd8ee; --ink: #14141c; --muted: #4a4a5a; --accent: #c8463c; --panel: rgba(239, 230, 210, 0.9); }
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: var(--page, var(--bg)); color: var(--ink);
+  font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace;
+}
+#stage { position: fixed; inset: 0; display: grid; place-items: center; }
+#game { display: block; image-rendering: pixelated; }
+#hud { position: fixed; inset: 0; pointer-events: none; }
