@@ -16,7 +16,9 @@
     "ace-scan": "vite-node scripts/ace-scan.ts",
     "eval-hole": "vite-node scripts/eval-hole.ts",
     "dev:paper-route": "vite --open /games/paper-route/",
-    "ingest:paper-route": "vite-node games/paper-route/scripts/ingest.ts"
+    "ingest:paper-route": "vite-node games/paper-route/scripts/ingest.ts",
+    "dev:bluebird-run": "vite --open /games/bluebird-run/",
+    "ingest:bluebird-run": "vite-node games/bluebird-run/scripts/ingest.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",

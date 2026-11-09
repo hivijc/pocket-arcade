@@ -1,0 +1,15 @@
+{
+  "pine": { "placeholder": { "color": "#2f5530", "w": 14, "h": 30 } },
+  "rock-s": { "placeholder": { "color": "#8a8a96", "w": 8, "h": 5 } },
+  "rock-l": { "placeholder": { "color": "#4a4a5a", "w": 16, "h": 10 } },
+  "snowman": { "placeholder": { "color": "#f4f8ff", "w": 12, "h": 20 } },
+  "flag-blue": { "placeholder": { "color": "#3d63c9", "w": 4, "h": 18 } },
+  "flag-red": { "placeholder": { "color": "#c8463c", "w": 4, "h": 18 } },
+  "ramp": { "placeholder": { "color": "#c9daee", "w": 36, "h": 10 } },
+  "flake": { "placeholder": { "color": "#f2c25b", "w": 6, "h": 6 } },
+  "hut": { "placeholder": { "color": "#6b4f3a", "w": 40, "h": 34 } },
+  "banner": { "placeholder": { "color": "#c8463c", "w": 60, "h": 30 } },
+  "skier-red": { "placeholder": { "color": "#c8463c", "w": 10, "h": 22 } },
+  "skier-green": { "placeholder": { "color": "#8fca6c", "w": 10, "h": 22 } },
+  "boarder-purple": { "placeholder": { "color": "#9b5fc0", "w": 10, "h": 22 } }
+}

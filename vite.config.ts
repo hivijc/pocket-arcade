@@ -14,6 +14,7 @@ export default defineConfig({
         hub: at('./index.html'),
         minigolf: at('./games/minigolf/index.html'),
         paperRoute: at('./games/paper-route/index.html'),
+        bluebirdRun: at('./games/bluebird-run/index.html'),
       },
     },
   },
