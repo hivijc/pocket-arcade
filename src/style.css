@@ -42,3 +42,7 @@ button {
 }
 table { border-collapse: collapse; margin: 12px auto; }
 td, th { padding: 4px 12px; text-align: left; }
+body[data-phase="morning"] { --bg: #2c2c3a; }
+body[data-phase="day"] { --bg: #2c2c3a; }
+body[data-phase="dusk"] { --bg: #2a2450; }
+body[data-phase="night"] { --bg: #14141c; }

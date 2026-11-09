@@ -1,40 +1,19 @@
 import './style.css';
-import manifestJson from '../assets/manifest.json';
-import hole1 from './world/holes/01.json';
-import hole2 from './world/holes/02.json';
-import hole3 from './world/holes/03.json';
+import { BUF_H, BUF_W, loadContent, type Content } from './content';
 import { attachInput, type InputEvent } from './core/input';
 import { createStepper, startLoop } from './core/loop';
 import { loadBest, saveBest, totalStrokes, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, update, type Action, type GameState } from './game/state';
 import { STEP } from './physics/constants';
-import { unproject, viewFor, type View } from './render/iso';
+import { unproject } from './render/iso';
+import { buildPhaseTables, postProcess, type PhaseTables } from './render/post';
 import { renderFrame } from './render/renderer';
-import { bakeToCanvases } from './render/assets';
-import { bakeTerrain } from './render/terrain-bake';
-import { createHud } from './ui/hud';
-import { parseHole, type Hole } from './world/hole';
-import { parseManifest, type Manifest } from './world/manifest';
+import { PHASES, phaseFor, type PhaseId } from './render/time-of-day';
+import { windStep } from './render/wind';
+import { createHud, type Hud } from './ui/hud';
 
-const BUF_W = 360;
-const BUF_H = 270;
 const LOAD_ERROR = "Couldn't load the Backyard — try refreshing";
-
-interface Content {
-  readonly manifest: Manifest;
-  readonly holes: readonly Hole[];
-  readonly views: readonly View[];
-  /** Pre-drawn terrain per hole, built up front so a drawing failure surfaces at boot. */
-  readonly terrains: readonly HTMLCanvasElement[];
-}
-
-function loadContent(): Content {
-  const manifest = parseManifest(manifestJson);
-  const holes = [hole1, hole2, hole3].map((raw, i) => parseHole(raw, manifest, `holes/0${i + 1}.json`));
-  const views = holes.map((h) => viewFor(h, BUF_W, BUF_H));
-  const terrains = holes.map((h, i) => bakeToCanvases(bakeTerrain(h, views[i], BUF_W, BUF_H))[0]);
-  return { manifest, holes, views, terrains };
-}
+const PHASE_CHECK_MS = 60_000;
 
 function safeStorage(): KeyValueStore | null {
   try {
@@ -50,72 +29,64 @@ function fitCanvas(canvas: HTMLCanvasElement): void {
   canvas.style.height = `${BUF_H * scale}px`;
 }
 
-function boot(): void {
-  const canvas = document.getElementById('game') as HTMLCanvasElement;
-  const hudRoot = document.getElementById('hud') as HTMLElement;
-  let content: Content | null = null;
-  let state: GameState | null = null;
+const currentPhase = (): PhaseId => phaseFor(window.location.search, new Date().getHours());
 
-  const dispatch = (a: Action) => {
-    if (content && state) state = reduce(state, a, content.holes);
-  };
-  const hud = createHud(hudRoot, {
-    onPlay: () => dispatch({ type: 'start' }),
-    onResume: () => dispatch({ type: 'resume' }),
-    onRestart: () => dispatch({ type: 'start' }),
-  });
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    console.error('2D canvas is not available');
-    hud.showError(LOAD_ERROR);
-    return;
-  }
-  try {
-    content = loadContent();
-  } catch (err) {
-    console.error('Failed to load course data:', err);
-    hud.showError(LOAD_ERROR);
-    return;
-  }
-  const { holes, manifest, views, terrains } = content;
-  state = initialState(holes);
-
+function wireInput(canvas: HTMLCanvasElement, content: Content, getState: () => GameState | null, dispatch: (a: Action) => void): void {
   const onInput = (e: InputEvent) => {
+    const state = getState();
     if (!state) return;
-    if (e.type === 'escape') {
-      dispatch({ type: 'togglePause' });
-    } else if (e.type === 'aimAt') {
-      dispatch({ type: 'aimAt', point: unproject(views[state.holeIndex], e.sx, e.sy, state.ball.z) });
-    } else {
-      dispatch({ type: e.type });
-    }
+    if (e.type === 'escape') dispatch({ type: 'togglePause' });
+    else if (e.type === 'aimAt') dispatch({ type: 'aimAt', point: unproject(content.perHole[state.holeIndex].view, e.sx, e.sy, state.ball.z) });
+    else dispatch({ type: e.type });
   };
-
-  fitCanvas(canvas);
-  window.addEventListener('resize', () => fitCanvas(canvas));
   attachInput(canvas, BUF_W, BUF_H, onInput);
   // A release that happens while the window is unfocused never arrives: drop the charge instead.
   window.addEventListener('blur', () => dispatch({ type: 'cancel' }));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) dispatch({ type: 'cancel' });
   });
+}
+
+function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, canvas: HTMLCanvasElement): void {
+  let state: GameState = initialState(content.holes);
+  const dispatch = (a: Action) => {
+    state = reduce(state, a, content.holes);
+  };
+  hud.setCallbacks({ onPlay: () => dispatch({ type: 'start' }), onResume: () => dispatch({ type: 'resume' }), onRestart: () => dispatch({ type: 'start' }) });
+  wireInput(canvas, content, () => state, dispatch);
+
+  const tables = new Map<PhaseId, PhaseTables>();
+  const tablesFor = (id: PhaseId) => tables.get(id) ?? tables.set(id, buildPhaseTables(content.palette, PHASES[id])).get(id)!;
+  let phase = currentPhase();
+  document.body.dataset.phase = phase;
+  window.setInterval(() => {
+    phase = currentPhase();
+    document.body.dataset.phase = phase;
+  }, PHASE_CHECK_MS);
 
   const storage = safeStorage();
   let best = loadBest(storage);
   let prevKind = state.phase.kind;
+  let time = 0;
   const steps = createStepper(STEP);
 
   const frame = (dt: number) => {
-    if (!state) return;
+    // The first rAF timestamp can predate the loop's start, giving a slightly negative dt.
+    time += Math.max(0, dt);
     const n = steps(dt);
-    for (let i = 0; i < n; i++) state = update(state, STEP, holes);
+    for (let i = 0; i < n; i++) state = update(state, STEP, content.holes);
     if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') best = saveBest(storage, totalStrokes(state.strokes));
     prevKind = state.phase.kind;
-    const i = state.holeIndex;
-    renderFrame(ctx, { state, hole: holes[i], view: views[i], terrain: terrains[i], manifest, width: BUF_W, height: BUF_H });
-    hud.update(state, holes, best);
-    // Ball events accumulate across this frame's substeps; once they've been read (Plan 2: audio), drop them.
+    const h = content.perHole[state.holeIndex];
+    const look = PHASES[phase];
+    const wind = windStep(time);
+    renderFrame(ctx, {
+      state, hole: h.hole, view: h.view, terrain: h.terrain[wind], manifest: content.manifest,
+      sprites: content.sprites, golfer: content.golfer, look, time, wind, width: BUF_W, height: BUF_H,
+    });
+    postProcess(ctx, BUF_W, BUF_H, content.palette.lut, tablesFor(phase), look.lamps ? h.light : null);
+    hud.update(state, content.holes, best);
+    // Ball events accumulate across this frame's substeps; once read (audio, Task 19), drop them.
     state = clearEvents(state);
   };
   const stop = startLoop((dt) => {
@@ -136,4 +107,23 @@ function boot(): void {
   }
 }
 
-boot();
+async function boot(): Promise<void> {
+  const canvas = document.getElementById('game') as HTMLCanvasElement;
+  const hud = createHud(document.getElementById('hud') as HTMLElement);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) {
+    console.error('2D canvas is not available');
+    hud.showError(LOAD_ERROR);
+    return;
+  }
+  fitCanvas(canvas);
+  window.addEventListener('resize', () => fitCanvas(canvas));
+  try {
+    runGame(ctx, await loadContent(), hud, canvas);
+  } catch (err) {
+    console.error('Failed to load course data:', err);
+    hud.showError(LOAD_ERROR);
+  }
+}
+
+void boot();

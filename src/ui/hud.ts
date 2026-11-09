@@ -11,6 +11,7 @@ export interface HudCallbacks {
 export interface Hud {
   update(state: GameState, holes: readonly Hole[], best: number | null): void;
   showError(message: string): void;
+  setCallbacks(cb: HudCallbacks): void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -56,7 +57,8 @@ function fillScorecard(table: HTMLTableElement, strokes: readonly number[], hole
   );
 }
 
-export function createHud(root: HTMLElement, cb: HudCallbacks): Hud {
+export function createHud(root: HTMLElement): Hud {
+  let cb: HudCallbacks = { onPlay: () => {}, onResume: () => {}, onRestart: () => {} };
   const hole = stat('Hole', 'hole');
   const par = stat('Par', 'par');
   const strokes = stat('Strokes', 'strokes');
@@ -72,13 +74,13 @@ export function createHud(root: HTMLElement, cb: HudCallbacks): Hud {
   const hint = el('div', 'hint', 'Mouse: aim · Hold click or Space: power · R: retry (+1) · Esc: menu');
 
   const title = overlay();
-  title.card.append(el('h1', undefined, 'Backyard'), el('p', undefined, '3 holes of mini-golf'), button('Play', cb.onPlay));
+  title.card.append(el('h1', undefined, 'Backyard'), el('p', undefined, '3 holes of mini-golf'), button('Play', () => cb.onPlay()));
   const menu = overlay();
-  menu.card.append(el('h1', undefined, 'Paused'), button('Resume', cb.onResume), button('Restart course', cb.onRestart));
+  menu.card.append(el('h1', undefined, 'Paused'), button('Resume', () => cb.onResume()), button('Restart course', () => cb.onRestart()));
   const score = overlay();
   const table = el('table');
   const bestLine = el('p');
-  score.card.append(el('h1', undefined, 'Scorecard'), table, bestLine, button('Play again', cb.onPlay));
+  score.card.append(el('h1', undefined, 'Scorecard'), table, bestLine, button('Play again', () => cb.onPlay()));
   const error = overlay();
   const errorText = el('p');
   error.card.append(errorText);
@@ -113,6 +115,9 @@ export function createHud(root: HTMLElement, cb: HudCallbacks): Hud {
     showError(message) {
       errorText.textContent = message;
       error.root.classList.add('on');
+    },
+    setCallbacks(next) {
+      cb = next;
     },
   };
 }
