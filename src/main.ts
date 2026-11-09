@@ -10,7 +10,8 @@ import { clearEvents, initialState, reduce, update, type Action, type GameState 
 import { STEP } from './physics/constants';
 import { unproject, viewFor, type View } from './render/iso';
 import { renderFrame } from './render/renderer';
-import { drawTerrain } from './render/terrain-draw';
+import { bakeToCanvases } from './render/assets';
+import { bakeTerrain } from './render/terrain-bake';
 import { createHud } from './ui/hud';
 import { parseHole, type Hole } from './world/hole';
 import { parseManifest, type Manifest } from './world/manifest';
@@ -31,7 +32,7 @@ function loadContent(): Content {
   const manifest = parseManifest(manifestJson);
   const holes = [hole1, hole2, hole3].map((raw, i) => parseHole(raw, manifest, `holes/0${i + 1}.json`));
   const views = holes.map((h) => viewFor(h, BUF_W, BUF_H));
-  const terrains = holes.map((h, i) => drawTerrain(h, views[i], BUF_W, BUF_H));
+  const terrains = holes.map((h, i) => bakeToCanvases(bakeTerrain(h, views[i], BUF_W, BUF_H))[0]);
   return { manifest, holes, views, terrains };
 }
 
