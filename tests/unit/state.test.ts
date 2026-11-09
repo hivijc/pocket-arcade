@@ -237,3 +237,23 @@ describe('aiming at a cursor point', () => {
     expect(aimAngle(s)).toBe(0.7);
   });
 });
+
+describe('dt robustness', () => {
+  const rolling = () => runUntil(reduce(aimingOn(), { type: 'putt', angle: 0, power: 0.5 }, HOLES), (s) => s.phase.kind === 'rolling' && s.phase.t > 0.1);
+
+  it('update with dt 0 (or a broken dt) while rolling changes nothing', () => {
+    const s = rolling();
+    expect(update(s, 0, HOLES)).toBe(s);
+    expect(update(s, -1, HOLES)).toBe(s);
+    expect(update(s, Number.NaN, HOLES)).toBe(s);
+  });
+
+  it('a large dt is stepped at the fixed physics step', () => {
+    const s = rolling();
+    let fine = s;
+    for (let i = 0; i < 10; i++) fine = update(fine, STEP, HOLES);
+    const coarse = update(s, 10 * STEP, HOLES);
+    expect(coarse.ball.x).toBeCloseTo(fine.ball.x, 9);
+    expect(coarse.ball.vx).toBeCloseTo(fine.ball.vx, 9);
+  });
+});

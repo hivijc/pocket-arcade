@@ -1,11 +1,13 @@
 import type { Hole, Vec2 } from '../world/hole';
 import { isMoving, restingBall, step, strike, type Ball, type BallEvent } from '../physics/ball';
-import { MAX_SIM_SECONDS } from '../physics/constants';
+import { MAX_SIM_SECONDS, STEP } from '../physics/constants';
 import { STROKE_CAP, scoreLabel } from './score';
 
 export const INTRO_SECONDS = 1.5;
 export const HOLED_SECONDS = 1.5;
 export const CHARGE_PERIOD = 2;
+/** Most physics steps one update may run (a 0.1 s frame at 120 Hz). */
+const MAX_ROLL_SUBSTEPS = 12;
 
 export type Phase =
   | { readonly kind: 'title' }
@@ -148,9 +150,10 @@ function advance(s: GameState, holes: readonly Hole[]): GameState {
   return { ...s, holeIndex: next, strokes: [...s.strokes, 0], ball: atTee(hole), lastRest: hole.tee, aimPoint: null, phase: { kind: 'intro', t: 0 } };
 }
 
-function roll(s: GameState, t: number, dt: number, holes: readonly Hole[]): GameState {
+/** One fixed physics step of a rolling ball, at rolling time t. */
+function rollStep(s: GameState, t: number, holes: readonly Hole[]): GameState {
   const hole = holes[s.holeIndex];
-  const r = step(s.ball, hole, dt);
+  const r = step(s.ball, hole, STEP);
   const events = r.events.length > 0 ? [...s.events, ...r.events] : s.events;
   const moved: GameState = { ...s, ball: r.ball, events, phase: { kind: 'rolling', t } };
   if (r.events.includes('holed')) return finishHole(moved, holes);
@@ -162,14 +165,22 @@ function roll(s: GameState, t: number, dt: number, holes: readonly Hole[]): Game
   return moved;
 }
 
+/** Advances a rolling ball by dt in whole fixed steps (at least one), stopping early once the shot ends. */
+function roll(s: GameState, t0: number, dt: number, holes: readonly Hole[]): GameState {
+  const n = Math.max(1, Math.min(MAX_ROLL_SUBSTEPS, Math.round(dt / STEP)));
+  let cur = s;
+  for (let i = 1; i <= n && cur.phase.kind === 'rolling'; i++) cur = rollStep(cur, t0 + (dt * i) / n, holes);
+  return cur;
+}
+
 /** Drops the accumulated ball events (returns the same state when there are none). */
 export function clearEvents(s: GameState): GameState {
   return s.events.length > 0 ? { ...s, events: [] } : s;
 }
 
-/** Advance time by dt seconds. The main loop calls this with the fixed physics step. */
+/** Advance time by dt seconds. The main loop calls this with the fixed physics step; physics always steps at STEP. */
 export function update(s: GameState, dt: number, holes: readonly Hole[]): GameState {
-  if (s.paused) return s;
+  if (s.paused || !(dt > 0)) return s; // dt 0, negative or NaN: time hasn't moved
   const p = s.phase;
   switch (p.kind) {
     case 'intro':
@@ -179,7 +190,7 @@ export function update(s: GameState, dt: number, holes: readonly Hole[]): GameSt
     case 'holed':
       return p.t + dt >= HOLED_SECONDS ? advance(s, holes) : { ...s, phase: { ...p, t: p.t + dt } };
     case 'rolling':
-      return roll(s, p.t + dt, dt, holes);
+      return roll(s, p.t, dt, holes);
     default:
       return s;
   }
