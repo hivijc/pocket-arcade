@@ -53,9 +53,12 @@ chasing monster**. The other riders on the slope are friendly and slow.
 
 - **Grid:** the same 2:1 iso projection (`TILE_W = 32`, `TILE_H = 16`, `Z_PX = 16`).
 - **Slope axes:** the downhill coordinate `d` (tiles from the start) is grid `x`, and the across
-  coordinate `c` is grid `y`. Riding downhill (`d` increasing) moves the rider **down-right (↘)** on
-  screen. Across, `c = 0` is the rider's left edge (up-right on screen) and `c = 16` is their right
-  edge (down-left on screen). Depth = `d + c`, so a larger value is closer and drawn later.
+  coordinate `c` maps to grid `y = 16 − c`. Riding downhill (`d` increasing) moves the rider
+  **down-right (↘)** on screen. Across, `c = 0` is the **screen-left** edge (down-left on screen) and
+  `c = 16` is the **screen-right** edge (up-right on screen). Turning right (→) always heads towards
+  screen-right (larger `c`), even though that's the rider's own left when they face the camera, so
+  the controls match what the player sees. Depth = `d + (16 − c)`, so a larger value is closer and
+  drawn later.
 - **Cross-section** (16 tiles across):
 
   | `c` range | strip |
@@ -85,14 +88,16 @@ All numbers are starting values and live in `sim/constants.ts`.
 **Board (on the ground)**
 - The board has a heading `θ` in degrees from straight downhill, clamped to −75…+75. ←/A and →/D
   turn it at 150°/s. With no input it slowly straightens towards 0 at 40°/s.
-- Speed: the downhill pull accelerates the rider by `5·cos θ` tiles/s², and drag is `0.35·v`, which
-  gives a top speed of about 8 tiles/s pointing straight down. Carving (|θ| > 45°) adds braking of
+- Speed: the downhill pull accelerates the rider by `5·cos θ` tiles/s², and drag is `0.625·v`, which
+  gives a top speed of 8 tiles/s pointing straight down. Carving (|θ| > 45°) adds braking of
   `4·(|θ| − 45°)/30°` tiles/s². The rider moves along `θ`, so carving across the hill is both how you
   steer and how you slow down. The start speed is 0 and there is a minimum speed of 1 tile/s once
   rolling, so you never stall.
 - Powder edge (`c < 2` or `c > 14`): drag ×3. The rider is clamped to `c` 0.4–15.6.
-- Sprite direction: SE when |θ| < 22°, E or S when carving, and NE or SW at the hardest carve. A spray
-  particle burst comes off the board when |θ| > 45° at speed.
+- `θ > 0` heads towards larger `c` (screen-right). Sprite direction: the facing angle (`θ`, plus any
+  spin in the air) is turned into a screen angle of `45° − facing`, and the nearest of the 8
+  directions is used. Straight down is SE. Carving right goes E and then NE at the hardest carve, and carving left goes S and then SW. A
+  spray particle burst comes off the board when |θ| > 45° at speed.
 
 **Ollie and air**
 - Space (or a tap on touch) on the ground does an **ollie**: 0.45 s of air with a peak height of
@@ -126,11 +131,12 @@ All numbers are starting values and live in `sim/constants.ts`.
   (radius 0.5, cannot be cleared).
 - **Snowman:** radius 0.35. It bursts into a puff of snow (one-off particles), but still crashes you.
 - **Other riders:** 3–4 friendly skiers and riders in different colours, each following an authored
-  slalom path down a section of the slope at 3–4.5 tiles/s. Touching one is a crash for you (they
-  wobble and carry on). They are only active while within 30 tiles of the player.
+  slalom path down a section of the slope at 3–4.5 tiles/s. Touching one is a crash for you, and they
+  carry on. They are only active while within 30 tiles of the player.
 - Overlaps are tested between the rider's radius (0.3) and each hazard's footprint circle, only while
-  the rider's height is below the hazard's clear height (trees, snowmen, big rocks and riders are
-  never cleared).
+  the rider's height is below the hazard's clear height: small rock 0.3, big rock 0.6, snowman 1.0,
+  other rider 1.2 and pine 2.0 tiles. An ollie clears only small rocks, and a fast kicker jump can
+  sail over almost anything.
 
 **Crash**
 - A 1.2 s tumble with the speed falling to 0, after which the rider stands up where they fell, facing
