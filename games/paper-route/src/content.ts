@@ -10,7 +10,7 @@ import streetJson from './world/streets/maple-lane.json';
 export const BUF_W = 360;
 export const BUF_H = 270;
 
-/** Present only once the rider art has been ingested (Task 17). */
+/** Written by the ingest script; if it is ever missing, the renderer draws a placeholder rider. */
 const RIDER_JSON = import.meta.glob('../assets/rider.json', { eager: true, import: 'default' }) as Record<string, unknown>;
 
 export interface Rider {

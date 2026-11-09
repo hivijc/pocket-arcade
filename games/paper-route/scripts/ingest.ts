@@ -6,13 +6,15 @@
 //     <dir> is an extracted PixelLab character ZIP: <dir>/<state>/animations/ride/<direction>/frame_NNN.png
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 import paletteJson from '../assets/palette.json';
 import { parsePalette } from '../src/render/palette';
 import { DIRS } from '../src/world/rider';
 import { bottomCenter, packRows, snapToPalette, trim, type Bitmap } from './lib/sprite-tools';
 
-const ASSETS = 'games/paper-route/assets';
+/** Resolved from this script's own location, so the game folder can move. */
+const ASSETS = fileURLToPath(new URL('../assets', import.meta.url));
 const RIDER_FPS = 10;
 const colors = parsePalette(paletteJson);
 

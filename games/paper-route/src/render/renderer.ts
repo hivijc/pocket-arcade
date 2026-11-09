@@ -41,6 +41,29 @@ export function houseSpot(lot: Lot): [number, number] {
   return [c, lot.s + LOT_LENGTH / 2];
 }
 
+/** Half-size of a subscriber's doormat, tiles (across, along): the bright target on the porch. */
+const MAT_HALF = [0.45, 0.6] as const;
+const MAT = '#f2c25b';
+
+/** Corners [c, s] of the doormat at the centre of a lot's porch. */
+export function doormatQuad(lot: Lot): [number, number][] {
+  const c = (lot.porch.c0 + lot.porch.c1) / 2;
+  const s = (lot.porch.s0 + lot.porch.s1) / 2;
+  const [hc, hs] = MAT_HALF;
+  return [[c - hc, s - hs], [c + hc, s - hs], [c + hc, s + hs], [c - hc, s + hs]];
+}
+
+function drawDoormat(ctx: CanvasRenderingContext2D, scene: Scene, view: View, lot: Lot): void {
+  const pts = doormatQuad(lot).map(([c, s]) => screen(scene, view, c, s));
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+  ctx.closePath();
+  ctx.fillStyle = MAT;
+  ctx.fill();
+  ctx.strokeStyle = OUTLINE;
+  ctx.stroke();
+}
+
 export const houseSprite = (lot: Lot): string => `${lot.house}-${lot.side === 'L' ? 'l' : 'r'}`;
 
 function screen(scene: Scene, view: View, c: number, s: number, z = 0): [number, number] {
@@ -103,6 +126,7 @@ function drawBike(ctx: CanvasRenderingContext2D, scene: Scene, view: View): void
 
 /** Flat things on the ground, drawn under every standing sprite. */
 function drawDecals(ctx: CanvasRenderingContext2D, scene: Scene, view: View): void {
+  for (const lot of scene.content.street.lots) if (lot.subscriber) drawDoormat(ctx, scene, view, lot);
   for (const h of scene.content.street.hazards) if (h.kind === 'puddle') drawSprite(ctx, scene, view, 'puddle', h.at[0], h.at[1]);
   for (const [c, s] of scene.state.landed) drawSprite(ctx, scene, view, 'paper', c, s, 0, 0);
 }

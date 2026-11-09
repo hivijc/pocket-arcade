@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { houseSpot, houseSprite } from '../../src/render/renderer';
+import { doormatQuad, houseSpot, houseSprite } from '../../src/render/renderer';
 import { parseStreet } from '../../src/world/street';
 import { rawStreet } from '../helpers/make-street';
 
@@ -15,5 +15,18 @@ describe('houses', () => {
   it('uses the sprite facing the street for each side', () => {
     expect(houseSprite(left)).toBe('house-a-l');
     expect(houseSprite(right)).toBe('house-b-r');
+  });
+});
+
+describe('doormat', () => {
+  it('marks the middle of a subscriber porch with a small flat quad', () => {
+    const quad = doormatQuad(left);
+    const cs = quad.map((p) => p[0]);
+    const ss = quad.map((p) => p[1]);
+    expect(quad).toHaveLength(4);
+    expect((Math.min(...cs) + Math.max(...cs)) / 2).toBeCloseTo((left.porch.c0 + left.porch.c1) / 2);
+    expect((Math.min(...ss) + Math.max(...ss)) / 2).toBeCloseTo((left.porch.s0 + left.porch.s1) / 2);
+    expect(Math.min(...cs)).toBeGreaterThan(left.porch.c0);
+    expect(Math.max(...ss)).toBeLessThan(left.porch.s1);
   });
 });
