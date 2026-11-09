@@ -35,12 +35,13 @@ describe('Backyard holes are solvable in par', () => {
     const shots = SOLUTIONS[hole.name];
     expect(shots.length).toBeLessThanOrEqual(hole.par);
     let ball = restingBall(hole, hole.tee);
-    let outcome = '';
-    for (const [deg, power] of shots) {
+    const outcomes = shots.map(([deg, power]) => {
       const r = simulateShot(hole, ball, (deg * Math.PI) / 180, power);
       ball = r.ball;
-      outcome = r.outcome;
-    }
-    expect(outcome).toBe('holed');
+      return r.outcome;
+    });
+    // Every shot but the last must come to rest in play (a water shot can't silently continue).
+    expect(outcomes.slice(0, -1).every((o) => o === 'stopped')).toBe(true);
+    expect(outcomes.at(-1)).toBe('holed');
   });
 });
