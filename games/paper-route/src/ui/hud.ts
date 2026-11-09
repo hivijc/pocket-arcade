@@ -1,7 +1,7 @@
 import { accuracy } from '../game/score';
 import type { GameState } from '../game/state';
 import type { Street } from '../world/street';
-import { endTitle, helmetsText, percent, popupText } from './hud-text';
+import { endTitle, helmetsText, hudCopy, percent, popupText } from './hud-text';
 
 export interface Hud {
   update(state: GameState, street: Street, best: number, time: number): void;
@@ -52,28 +52,55 @@ function subscribersOf(street: Street): number {
   return n;
 }
 
-export function createHud(root: HTMLElement): Hud {
+export interface HudOptions {
+  /** Touch screen: tap wording, no key hint, and the cards take taps. */
+  readonly touch?: boolean;
+  /** A tap on the title or end card. */
+  readonly onStart?: () => void;
+  /** A tap on the pause card. */
+  readonly onResume?: () => void;
+}
+
+/** Makes a card's overlay answer taps (touch play has no Enter or Esc key). */
+function onTap(o: HTMLElement, act: (() => void) | undefined): void {
+  if (!act) return;
+  o.classList.add('tappable');
+  o.addEventListener('pointerup', (e) => {
+    e.preventDefault();
+    act();
+  });
+}
+
+export function createHud(root: HTMLElement, opts: HudOptions = {}): Hud {
+  const copy = hudCopy(opts.touch === true);
+  root.classList.toggle('touch', opts.touch === true);
   const bar = el('div', 'bar', root);
   const stats = { score: stat(bar, 'score'), papers: stat(bar, 'papers'), delivered: stat(bar, 'delivered'), helmets: stat(bar, 'helmets') };
   const popup = el('div', 'popup', root);
-  el('div', 'hint', root, 'A/D steer · W/S speed · J/Q toss left · K/E toss right · Esc pause');
+  if (copy.hint) el('div', 'hint', root, copy.hint);
 
   const [title, titleCard] = overlay(root, 'title');
   el('h1', '', titleCard, 'Paper Route');
   el('p', '', titleCard, 'Deliver the morning paper down Maple Lane. Mind the dog.');
-  el('p', 'keys', titleCard, 'A/D or ←/→ steer · W/S speed · J/Q toss left · K/E toss right');
+  el('p', 'keys', titleCard, copy.keys);
   const titleBest = el('p', 'best', titleCard);
-  el('p', 'cta', titleCard, 'Press Enter to ride');
+  el('p', 'cta', titleCard, copy.titleCta);
 
   const [pause, pauseCard] = overlay(root, 'pause');
   el('h1', '', pauseCard, 'Paused');
-  el('p', '', pauseCard, 'Esc to keep riding · R to restart');
+  el('p', '', pauseCard, copy.pauseHelp);
 
   const [end, endCard] = overlay(root, 'end');
   const endHeading = el('h1', '', endCard);
   const table = el('table', '', endCard);
   const cells = { delivered: row(table, 'Deliveries'), accuracy: row(table, 'Accuracy'), score: row(table, 'Score'), best: row(table, 'Best') };
-  el('p', 'cta', endCard, 'Press R or Enter to ride again');
+  el('p', 'cta', endCard, copy.endCta);
+
+  if (opts.touch) {
+    onTap(title, opts.onStart);
+    onTap(end, opts.onStart);
+    onTap(pause, opts.onResume);
+  }
 
   const [error, errorCard] = overlay(root, 'error');
   const errorText = el('p', '', errorCard);

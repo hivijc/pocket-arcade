@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endTitle, helmetsText, percent, popupText } from '../../src/ui/hud-text';
+import { endTitle, helmetsText, hudCopy, percent, popupText } from '../../src/ui/hud-text';
 
 describe('hud text', () => {
   it('shows helmets left as filled and empty pips', () => {
@@ -23,5 +23,16 @@ describe('hud text', () => {
     expect(popupText([{ type: 'treat', points: 50 }])).toBe('Good dog! +50');
     expect(popupText([{ type: 'pickup' }])).toBe('+5 papers');
     expect(popupText([{ type: 'crash' }])).toBe('Ouch!');
+  });
+});
+
+describe('hud copy', () => {
+  it('speaks keys on desktop and taps on touch screens', () => {
+    expect(hudCopy(false).titleCta).toBe('Press Enter to ride');
+    expect(hudCopy(true).titleCta).toBe('Tap to ride');
+    expect(hudCopy(true).endCta).toBe('Tap to ride again');
+    expect(hudCopy(true).pauseHelp).toMatch(/Tap to keep riding/);
+    expect(hudCopy(true).hint).toBe('');
+    expect(hudCopy(true).keys).toMatch(/stick/);
   });
 });
