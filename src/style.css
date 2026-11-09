@@ -1,0 +1,44 @@
+:root {
+  --bg: #1b2a2f;
+  --ink: #f3ead7;
+  --muted: #a9b6ad;
+  --accent: #f0a64a;
+  --panel: rgba(34, 52, 58, 0.85);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--ink);
+  font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace;
+}
+#stage { position: fixed; inset: 0; display: grid; place-items: center; }
+#game { display: block; image-rendering: pixelated; }
+#hud { position: fixed; inset: 0; pointer-events: none; }
+.bar {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 28px; padding: 8px 18px; background: var(--panel); border-radius: 10px;
+}
+.stat b { display: block; font-size: 18px; color: var(--accent); }
+.stat span { font-size: 10px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+.power {
+  position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+  width: 240px; height: 10px; background: var(--panel); border-radius: 5px; overflow: hidden; visibility: hidden;
+}
+.power.on { visibility: visible; }
+.power i { display: block; height: 100%; width: 0; background: var(--accent); }
+.popup {
+  position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+  font-size: 26px; color: var(--accent); text-shadow: 0 2px 0 #0008; visibility: hidden;
+}
+.popup.on { visibility: visible; }
+.hint { position: absolute; bottom: 8px; left: 16px; font-size: 11px; color: var(--muted); }
+.overlay { position: absolute; inset: 0; display: none; place-items: center; background: rgba(0, 0, 0, .5); pointer-events: auto; }
+.overlay.on { display: grid; }
+.card { background: var(--bg); padding: 24px 32px; border-radius: 12px; text-align: center; min-width: 300px; }
+.card h1 { margin: 0 0 8px; color: var(--accent); font-size: 22px; }
+button {
+  font: inherit; padding: 8px 18px; margin: 6px; border: 0; border-radius: 8px;
+  background: var(--accent); color: var(--bg); cursor: pointer;
+}
+table { border-collapse: collapse; margin: 12px auto; }
+td, th { padding: 4px 12px; text-align: left; }
