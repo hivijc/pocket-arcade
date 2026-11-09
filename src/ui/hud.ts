@@ -1,5 +1,5 @@
 import titlePanelUrl from '../../assets/ui/title-panel.png';
-import { totalStrokes } from '../game/score';
+import { isCelebration, totalStrokes } from '../game/score';
 import { chargePower, type GameState } from '../game/state';
 import type { Hole } from '../world/hole';
 
@@ -10,7 +10,8 @@ export interface HudCallbacks {
 }
 
 export interface Hud {
-  update(state: GameState, holes: readonly Hole[], best: number | null): void;
+  /** `newBest` is true when the course just finished beat (or set) the best total. */
+  update(state: GameState, holes: readonly Hole[], best: number | null, newBest?: boolean): void;
   showError(message: string): void;
   setCallbacks(cb: HudCallbacks): void;
 }
@@ -43,19 +44,34 @@ function button(label: string, onClick: () => void): HTMLButtonElement {
   return b;
 }
 
-function row(cells: readonly string[], tag: 'td' | 'th'): HTMLTableRowElement {
+function row(cells: readonly string[], tag: 'td' | 'th', order?: number): HTMLTableRowElement {
   const r = el('tr');
   r.append(...cells.map((c) => el(tag, undefined, c)));
+  if (order !== undefined) {
+    r.classList.add('reveal');
+    r.style.setProperty('--i', String(order));
+  }
   return r;
 }
 
-function fillScorecard(table: HTMLTableElement, strokes: readonly number[], holes: readonly Hole[]): void {
+function fillScorecard(table: HTMLTableElement, strokes: readonly number[], holes: readonly Hole[], newBest: boolean): void {
   const parTotal = holes.reduce((sum, h) => sum + h.par, 0);
+  const total = row(['Total', String(parTotal), String(totalStrokes(strokes))], 'th', holes.length);
+  total.classList.add('total');
+  total.classList.toggle('best', newBest);
   table.replaceChildren(
     row(['Hole', 'Par', 'Strokes'], 'th'),
-    ...holes.map((h, i) => row([`${i + 1} ${h.name}`, String(h.par), String(strokes[i] ?? '-')], 'td')),
-    row(['Total', String(parTotal), String(totalStrokes(strokes))], 'th'),
+    ...holes.map((h, i) => row([`${i + 1} ${h.name}`, String(h.par), String(strokes[i] ?? '-')], 'td', i)),
+    total,
   );
+}
+
+/** Restarts the popup's CSS pop-in by re-adding its class (a reflow in between replays the animation). */
+function pop(popup: HTMLElement, big: boolean): void {
+  popup.classList.remove('pop', 'big');
+  void popup.offsetWidth;
+  popup.classList.add('pop');
+  popup.classList.toggle('big', big);
 }
 
 export function createHud(root: HTMLElement): Hud {
@@ -90,9 +106,10 @@ export function createHud(root: HTMLElement): Hud {
 
   root.append(bar, power, popup, hint, title.root, menu.root, score.root, error.root);
   let shownScorecard = '';
+  let shownPopup = '';
 
   return {
-    update(state, holes, best) {
+    update(state, holes, best, newBest = false) {
       const h = holes[state.holeIndex];
       const p = state.phase;
       hole.value.textContent = `${state.holeIndex + 1} · ${h.name}`;
@@ -101,17 +118,24 @@ export function createHud(root: HTMLElement): Hud {
       power.classList.toggle('on', p.kind === 'charging');
       fill.style.width = p.kind === 'charging' ? `${Math.round(chargePower(p.t) * 100)}%` : '0';
       const message = p.kind === 'holed' ? p.label : p.kind === 'intro' ? `${h.name} · Par ${h.par}` : '';
-      popup.textContent = message;
+      const popupKey = `${state.holeIndex}|${p.kind}|${message}`;
+      if (popupKey !== shownPopup) {
+        shownPopup = popupKey;
+        popup.textContent = message;
+        if (message !== '') pop(popup, p.kind === 'holed' && isCelebration(state.strokes[state.holeIndex], h.par));
+      }
       popup.classList.toggle('on', message !== '');
       title.root.classList.toggle('on', p.kind === 'title');
       menu.root.classList.toggle('on', state.paused);
       score.root.classList.toggle('on', p.kind === 'scorecard');
       if (p.kind === 'scorecard') {
-        const key = `${state.strokes.join(',')}|${best}`;
+        const key = `${state.strokes.join(',')}|${best}|${newBest}`;
         if (key !== shownScorecard) {
           shownScorecard = key;
-          fillScorecard(table, state.strokes, holes);
-          bestLine.textContent = best === null ? '' : `Best total: ${best}`;
+          fillScorecard(table, state.strokes, holes, newBest);
+          bestLine.textContent = best === null ? '' : newBest ? `New best! ${best}` : `Best total: ${best}`;
+          bestLine.className = newBest ? 'reveal new-best' : 'reveal';
+          bestLine.style.setProperty('--i', String(holes.length + 1));
         }
       }
     },

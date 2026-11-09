@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BEST_KEY, STROKE_CAP, loadBest, saveBest, scoreLabel, totalStrokes, type KeyValueStore } from '../../src/game/score';
+import { BEST_KEY, STROKE_CAP, isCelebration, loadBest, saveBest, scoreLabel, totalStrokes, type KeyValueStore } from '../../src/game/score';
 
 function memoryStore(initial: Record<string, string> = {}): KeyValueStore & { data: Record<string, string> } {
   const data = { ...initial };
@@ -59,5 +59,18 @@ describe('best total', () => {
   it('survives storage that throws', () => {
     expect(loadBest(brokenStore)).toBeNull();
     expect(saveBest(brokenStore, 8)).toBe(8);
+  });
+});
+
+describe('isCelebration', () => {
+  it('is true for birdie or better, including a hole in one', () => {
+    expect(isCelebration(2, 3)).toBe(true);
+    expect(isCelebration(1, 3)).toBe(true);
+    expect(isCelebration(1, 2)).toBe(true);
+    expect(isCelebration(2, 5)).toBe(true);
+  });
+  it('is false for par or worse', () => {
+    expect(isCelebration(3, 3)).toBe(false);
+    expect(isCelebration(5, 3)).toBe(false);
   });
 });

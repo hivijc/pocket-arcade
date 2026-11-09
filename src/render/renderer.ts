@@ -4,6 +4,7 @@ import { heightAt } from '../physics/terrain';
 import { PLACEHOLDER_ANIMS, type GolferLayout } from '../world/golfer';
 import type { Hole } from '../world/hole';
 import type { Manifest, SpriteImage } from '../world/manifest';
+import { effectPixels, flagWiggle, NO_EFFECTS, trailPixels, type EffectAt, type Effects } from './effects';
 import { classifyWall, picketPixels, wallDepth, type Px } from './fences';
 import { golferPose, type GolferPose } from './golfer-pose';
 import { depthOf, project, sortByDepth, type View } from './iso';
@@ -24,6 +25,8 @@ export interface Frame {
   readonly wind: number;
   readonly width: number;
   readonly height: number;
+  /** Juice: event particles, the flag wiggle and the rolling trail (none when omitted). */
+  readonly effects?: Effects;
 }
 
 interface Drawable {
@@ -114,13 +117,32 @@ function props(f: Frame): Drawable[] {
 function flag(f: Frame): Drawable {
   const [cx, cy] = f.hole.cup;
   const [sx, sy] = ground(f, cx, cy);
+  const wiggle = flagWiggle(f.effects ?? NO_EFFECTS, f.time);
   return {
     depth: depthOf(cx, cy) + 0.01,
     draw: (ctx) => {
       rect(ctx, sx, sy - 16, 1, 16, COLORS.pole);
-      rect(ctx, sx + 1, sy - 16 + (f.wind ? 1 : 0), 6, 4, COLORS.flag);
+      rect(ctx, sx + 1 + wiggle, sy - 16 + (f.wind ? 1 : 0) + (wiggle ? 1 : 0), 6, 4, COLORS.flag);
     },
   };
+}
+
+const effectOrigin = (f: Frame, [x, y, z]: EffectAt): Vec2 => (z === null ? ground(f, x, y) : project(f.view, x, y, z));
+
+/** The rolling ball's faint trail, drawn on the ground under everything else. */
+function drawTrail(ctx: CanvasRenderingContext2D, f: Frame): void {
+  const trail = f.effects?.trail ?? [];
+  if (trail.length === 0) return;
+  const b = f.state.ball;
+  plotPx(ctx, trailPixels(trail.map(([x, y, z]) => project(f.view, x, y, z)), project(f.view, b.x, b.y, b.z)));
+}
+
+/** Event particles, drawn over the scene (they are a pixel or two and short-lived). */
+function drawEffects(ctx: CanvasRenderingContext2D, f: Frame): void {
+  for (const e of f.effects?.list ?? []) {
+    const [sx, sy] = effectOrigin(f, e.at);
+    plotPx(ctx, effectPixels(e, f.time, sx, sy));
+  }
 }
 
 function ball(f: Frame): Drawable[] {
@@ -185,6 +207,8 @@ export function renderFrame(ctx: CanvasRenderingContext2D, f: Frame): void {
   ctx.fillRect(0, 0, f.width, f.height);
   ctx.drawImage(f.terrain, 0, 0);
   drawCup(ctx, f);
+  drawTrail(ctx, f);
   for (const d of sortByDepth([...walls(f), ...props(f), flag(f), ...ball(f), ...golfer(f)])) d.draw(ctx);
+  drawEffects(ctx, f);
   drawAim(ctx, f);
 }
