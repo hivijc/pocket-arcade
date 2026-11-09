@@ -8,7 +8,7 @@ import { loadBest, saveBest, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, type Action, type GameState } from './game/state';
 import { bakeToCanvases } from './render/assets';
 import { cameraTarget, followCamera, snapCamera, type Camera } from './render/camera';
-import { createChunkCache, visibleChunks } from './render/chunks';
+import { createChunkCache, visibleChunks, type ChunkCache } from './render/chunks';
 import { parseHex } from './render/palette';
 import { buildTable, MORNING, postColor, postProcess } from './render/post';
 import { BACKGROUND, renderFrame } from './render/renderer';
@@ -58,11 +58,34 @@ interface FrameDeps {
   readonly setState: (s: GameState) => void;
 }
 
+/** Runs `task` when the browser is idle (falling back to the next tick), never inside a frame. */
+function whenIdle(task: () => void): void {
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(task);
+  else window.setTimeout(task, 0);
+}
+
+/** Bakes chunks ahead of need, one idle slot at a time. Visible chunks still bake on demand. */
+function createPrebaker(chunks: ChunkCache<HTMLCanvasElement[]>): (index: number) => void {
+  // Mutated on purpose: at most one bake is scheduled, and an index is not rescheduled once requested.
+  let pending = false;
+  let last = -1;
+  return (index) => {
+    if (pending || index === last) return;
+    pending = true;
+    last = index;
+    whenIdle(() => {
+      pending = false;
+      chunks.get(index);
+    });
+  };
+}
+
 function createFrame(d: FrameDeps): (dt: number) => void {
   const { street } = d.content;
   const table = buildTable(d.content.palette, MORNING);
   matchPageToCanvas(d.content, table);
   const chunks = createChunkCache((i) => bakeToCanvases(bakeChunk(street.length, i)));
+  const prebake = createPrebaker(chunks);
   const count = chunkCount(street.length);
   const storage = safeStorage();
   const steps = createStepper(STEP);
@@ -88,7 +111,7 @@ function createFrame(d: FrameDeps): (dt: number) => void {
     // Keep what is on screen plus the next chunk ahead, baked before it scrolls into view.
     const ahead = (visible[0] ?? 0) + 1;
     chunks.keepOnly(ahead < count ? [...visible, ahead] : visible);
-    if (ahead < count) chunks.get(ahead);
+    if (ahead < count) prebake(ahead);
     for (const sound of soundsFor(state.events)) d.sfx.play(sound);
     d.hud.update(state, street, best, time);
     d.setState(clearEvents(state));
