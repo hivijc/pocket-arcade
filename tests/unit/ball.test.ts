@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isMoving, restingBall, step, strike, type Ball } from '../../src/physics/ball';
+import { isMoving, restingBall, step, strike, type Ball, type BallEvent } from '../../src/physics/ball';
 import { simulateShot } from '../../src/physics/simulate';
 import { BALL_R, FRICTION, MAX_PUTT_SPEED } from '../../src/physics/constants';
 import { makeHole } from '../helpers/makeHole';
@@ -107,6 +107,31 @@ describe('cup', () => {
     expect(r.outcome).toBe('holed');
     expect([r.ball.x, r.ball.y]).toEqual([6.5, 2.5]);
     expect(isMoving(r.ball)).toBe(false);
+  });
+
+  /** Rolls a ball toward the cup at (6.5, 2.5) from just outside its radius; returns every event until it rests. */
+  function cupPass(speedIn: number, offset: number): BallEvent[] {
+    const hole = makeHole({ cup: [6.5, 2.5] });
+    let ball: Ball = { ...restingBall(hole, [6.3, 2.5 + offset]), vx: speedIn };
+    const events: BallEvent[] = [];
+    for (let i = 0; i < 2000 && isMoving(ball); i++) {
+      const r = step(ball, hole);
+      events.push(...r.events);
+      ball = r.ball;
+    }
+    return events;
+  }
+
+  it.each([['dead-centre', 0], ['off-centre', 0.1]])('an entry at 2.4 tiles/s lips out and is not holed (%s)', (_n, offset) => {
+    const events = cupPass(2.4, offset);
+    expect(events).not.toContain('holed');
+    expect(events.filter((e) => e === 'lip')).toHaveLength(1);
+  });
+
+  it('an entry just below the capture speed is holed', () => {
+    const events = cupPass(2.1, 0.05);
+    expect(events).toContain('holed');
+    expect(events).not.toContain('lip');
   });
 
   it('lips out when too fast', () => {

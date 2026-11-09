@@ -112,12 +112,14 @@ function settle(b: Ball, hole: Hole, events: BallEvent[]): Ball {
   const sp = Math.hypot(b.vx, b.vy);
   const tx = hole.cup[0] - b.x, ty = hole.cup[1] - b.y;
   const overCup = Math.hypot(tx, ty) < CUP_R;
-  if (overCup && sp < CAPTURE_SPEED) {
+  const entering = overCup && !b.overCup;
+  // Capture is decided once per pass, on the entry step: a ball that lips out can't drop until it re-enters.
+  if (entering && sp < CAPTURE_SPEED) {
     events.push('holed');
     return { ...halt(b), x: hole.cup[0], y: hole.cup[1], z, overCup: true };
   }
   let vx = b.vx, vy = b.vy;
-  if (overCup && !b.overCup) {
+  if (entering) {
     events.push('lip');
     const side = Math.sign(vx * ty - vy * tx); // cup to the left (+) or right (-) of travel
     const a = -side * LIP_DEFLECT;
