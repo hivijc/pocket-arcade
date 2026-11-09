@@ -7,6 +7,7 @@ import { clearEvents, initialState, reduce, update, type Action, type GameState 
 import { audioTransition, rollSpeedOf, shouldPlayAudio, soundsFor } from './audio/sfx-math';
 import { createSfx, type Sfx } from './audio/sfx';
 import { MAX_PUTT_SPEED, STEP } from './physics/constants';
+import { NO_EFFECTS, prune, spawnEffects, trackTrail, type Effects } from './render/effects';
 import { unproject } from './render/iso';
 import { parseHex } from './render/palette';
 import { buildPhaseTables, postColor, postProcess, type PhaseTables } from './render/post';
@@ -126,14 +127,14 @@ interface FrameDeps {
   readonly setState: (s: GameState) => void;
 }
 
-function drawFrame(d: FrameDeps, tables: PhaseTables, state: GameState, time: number): void {
+function drawFrame(d: FrameDeps, tables: PhaseTables, state: GameState, time: number, effects: Effects): void {
   const { ctx, content } = d;
   const h = content.holeContent(state.holeIndex);
   const look = PHASES[d.phase()];
   const wind = windStep(time);
   renderFrame(ctx, {
     state, hole: h.hole, view: h.view, terrain: h.terrain[wind], manifest: content.manifest,
-    sprites: content.sprites, golfer: content.golfer, look, time, wind, width: BUF_W, height: BUF_H,
+    sprites: content.sprites, golfer: content.golfer, look, time, wind, width: BUF_W, height: BUF_H, effects,
   });
   postProcess(ctx, BUF_W, BUF_H, content.palette.lut, tables, look.lamps ? h.light : null);
 }
@@ -143,8 +144,10 @@ function createFrame(d: FrameDeps): (dt: number) => void {
   const tablesFor = (id: PhaseId) => tables.get(id) ?? tables.set(id, buildPhaseTables(d.content.palette, PHASES[id])).get(id)!;
   const storage = safeStorage();
   let best = loadBest(storage);
+  let newBest = false;
   let prevKind = d.getState().phase.kind;
   let time = 0;
+  let effects = NO_EFFECTS;
   const steps = createStepper(STEP);
 
   return (dt: number) => {
@@ -152,14 +155,23 @@ function createFrame(d: FrameDeps): (dt: number) => void {
     time += Math.max(0, dt);
     const n = steps(dt);
     let state = d.getState();
-    for (let i = 0; i < n; i++) state = update(state, STEP, d.content.holes);
+    for (let i = 0; i < n; i++) {
+      const prev = state;
+      state = update(prev, STEP, d.content.holes);
+      effects = spawnEffects(effects, prev, state, d.content.holes[prev.holeIndex].cup, time);
+    }
+    effects = trackTrail(prune(effects, time), state.ball, state.phase.kind === 'rolling');
     d.setState(state);
-    if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') best = saveBest(storage, totalStrokes(state.strokes));
+    if (state.phase.kind === 'scorecard' && prevKind !== 'scorecard') {
+      const total = totalStrokes(state.strokes);
+      newBest = best === null || total < best;
+      best = saveBest(storage, total);
+    }
     if (state.phase.kind === 'intro' && prevKind !== 'intro') prebakeNext(d.content, state.holeIndex);
     frameAudio(d.audio, prevKind, state);
     prevKind = state.phase.kind;
-    drawFrame(d, tablesFor(d.phase()), state, time);
-    d.hud.update(state, d.content.holes, best);
+    drawFrame(d, tablesFor(d.phase()), state, time, effects);
+    d.hud.update(state, d.content.holes, best, newBest);
     // Ball events accumulate across this frame's substeps; once read (audio, Task 19), drop them.
     d.setState(clearEvents(state));
   };

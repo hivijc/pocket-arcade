@@ -49,3 +49,33 @@ td, th { padding: 4px 12px; text-align: left; }
 }
 .card.title-card h1 { color: var(--ink); text-shadow: 0 2px 0 #0008; }
 .card.title-card p { color: var(--ink); text-shadow: 0 2px 0 #000a, 0 0 4px #000a; font-weight: bold; }
+
+/* Juice: holed/intro popup pops in; birdie or better gets a bigger bounce and a gold glow. */
+.popup.pop { animation: pop-in 260ms cubic-bezier(.2, 1.6, .4, 1) both; }
+.popup.pop.big { color: #f2c25b; animation: pop-big 520ms cubic-bezier(.2, 1.8, .4, 1) both; text-shadow: 0 2px 0 #0008, 0 0 10px #f2c25b88; }
+@keyframes pop-in {
+  from { transform: translateX(-50%) scale(.3); opacity: 0; }
+  to { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+@keyframes pop-big {
+  0% { transform: translateX(-50%) scale(.3) rotate(-6deg); opacity: 0; }
+  55% { transform: translateX(-50%) scale(1.45) rotate(3deg); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1.2) rotate(0); opacity: 1; }
+}
+
+/* Scorecard rows land one by one; the total and a new best light up last. */
+.reveal { animation: row-in 240ms ease-out both; animation-delay: calc(var(--i, 0) * 140ms + 120ms); }
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+tr.total th { border-top: 1px solid var(--muted); }
+tr.total.best th:last-child, .new-best { color: #f2c25b; }
+tr.total.best th:last-child { animation: best-glow 900ms ease-in-out 2; animation-delay: inherit; }
+.new-best { font-weight: bold; text-shadow: 0 0 8px #f2c25b88; }
+@keyframes best-glow {
+  50% { text-shadow: 0 0 10px #f2c25b; transform: scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popup.pop, .popup.pop.big, .reveal, tr.total.best th:last-child { animation: none; }
+}

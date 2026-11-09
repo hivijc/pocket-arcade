@@ -17,6 +17,11 @@ export function scoreLabel(strokes: number, par: number): string {
   return `+${diff}`;
 }
 
+/** Birdie or better (a hole in one always counts): worth a bigger popup. */
+export function isCelebration(strokes: number, par: number): boolean {
+  return strokes === 1 || strokes < par;
+}
+
 export function totalStrokes(strokes: readonly number[]): number {
   return strokes.reduce((sum, s) => sum + s, 0);
 }

@@ -128,8 +128,8 @@
     "image": {
       "src": "watering-can.png",
       "anchor": [
-        10,
-        20
+        13,
+        19
       ]
     }
   },
@@ -141,8 +141,8 @@
     "image": {
       "src": "hose-reel.png",
       "anchor": [
-        8,
-        16
+        11,
+        25
       ]
     }
   },
