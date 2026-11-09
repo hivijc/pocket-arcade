@@ -4,7 +4,8 @@ export default defineConfig({
   timeout: 30_000,
   use: { baseURL: 'http://localhost:5199' },
   projects: [
-    { name: 'minigolf', testDir: 'tests/e2e' },
+    { name: 'hub', testDir: 'tests/e2e', testMatch: 'hub.spec.ts' },
+    { name: 'minigolf', testDir: 'tests/e2e', testIgnore: 'hub.spec.ts' },
     { name: 'paper-route', testDir: 'games/paper-route/tests/e2e' },
   ],
   webServer: {
