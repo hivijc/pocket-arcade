@@ -394,3 +394,42 @@ HUD update.
 - Everything lives under `games/bluebird-run/`. Its only root touch points are listed in §6.
 - Hub card: **Bluebird Run**, "Carve Pinecone Bowl on a bluebird day. Gates, kickers and a clean
   landing." The thumbnail is a real in-game screenshot.
+
+## 13. Slice as built (deviations recorded after implementation)
+
+- **Axes:** `c` runs from screen-left (0) to screen-right (16), so → always steers screen-right (§4).
+  The rider's facing angle is mapped to the nearest of 8 sprite directions through a screen angle of
+  `45° − facing`.
+- **Physics numbers:** drag is 0.625 (pull 5 / 8 tiles/s top speed). Hazards have clear heights
+  (small rock 0.3, big rock 0.6, snowman 1.0, rider 1.2, pine 2.0), so a big kicker jump can sail
+  over obstacles.
+- **Run length:** a clean run is about 45 s, not 60–75 s, so par is 60 (the user's choice). The
+  course is 362 long with the finish at 350, and the loader requires at least 12 tiles of run-out.
+- **Grab rule:** on keyboard, a fresh press of Space in the air (the ollie's own press doesn't
+  count). On touch, a finger held still within 12 px of its anchor, or a second finger. Dragging
+  spins. Touch steering has a 4 px dead zone.
+- **Ramps:** a jump while riding up a kicker is ignored, so the kicker launches at the lip. Crossing
+  the finish in the air settles the landing there: a clean landing scores the trick, and a dirty one
+  counts as a wipeout with no tumble.
+- **Other riders** wake once, 30 tiles above their start, and ride to the end of their path. They
+  don't wobble.
+- **Course tuning:** the glade-exit big rock moved from [8, 148] to [10.5, 149], so a careful line
+  isn't forced into a pine. The headless "careful" bot finishes in about 45 s with 0 crashes. Riding
+  straight down crashes 5 times.
+- **Phone portrait:** the canvas fills 58% of the screen height and crops the sides, always keeping
+  at least 200 buffer pixels across. That gives a much bigger playfield than a width fit, and the
+  HUD buttons sit in the thumb zone below it. Landscape fills the height, with the buttons stacked
+  at the right edge.
+- **Art:** PixelLab v3 snowboarder at 32 px (8 directions; ride uses the static rotations, and air,
+  grab and tumble are animated) and map objects for the props. Stray pixel specks were removed
+  before ingest. The small rock and the snowflake were halved to keep props small next to the rider.
+  The snowflake is a static golden coin, not a spinning one.
+- **Snow look:** the packed and shade ramps were lightened so they read as snow, not blue blocks.
+  The corduroy follows the fall line.
+- **Rock sides** show only on the two faces turned to the viewer: the screen-left long edge and the
+  bottom end.
+- **Audio:** the carve swish is silenced when the tab is hidden or after a runtime error. iOS's
+  "interrupted" audio state is resumed.
+- **Root:** Playwright's `reuseExistingServer` is false, so port 5199 must be free for `npm run e2e`.
+  The exhaustive mini-golf solver test got a 20 s budget, because with more suites running in
+  parallel the default 5 s was too tight.
