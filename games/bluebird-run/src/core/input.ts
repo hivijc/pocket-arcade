@@ -33,10 +33,24 @@ export interface Input {
   detach(): void;
 }
 
-type KeyLike = Event & { readonly code?: string; readonly repeat?: boolean };
+type KeyLike = Event & {
+  readonly code?: string;
+  readonly repeat?: boolean;
+  readonly metaKey?: boolean;
+  readonly ctrlKey?: boolean;
+  readonly altKey?: boolean;
+};
 
-/** Pointer presses on HUD buttons and links are theirs, not steering. */
-const onControl = (e: PointerEvent): boolean => e.target instanceof Element && e.target.closest('button, a') !== null;
+const CONTROLS = 'button, a, [role=button], input, label';
+
+/** True when the event's target is (inside) an element matching `selector`. Duck-typed so it also works without a DOM. */
+function within(e: Event, selector: string): boolean {
+  const t = e.target as { closest?: unknown } | null;
+  return t !== null && typeof t === 'object' && typeof t.closest === 'function' && (t as Element).closest(selector) !== null;
+}
+
+/** Pointer presses on HUD buttons, links and form controls are theirs, not steering. */
+const onControl = (e: Event): boolean => within(e, CONTROLS);
 
 const sampleOf = (kind: TouchSample['kind'], e: PointerEvent): TouchSample =>
   ({ kind, id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp });
@@ -46,8 +60,8 @@ export function attachInput(target: Window, onAction: (a: Action) => void): Inpu
   const held = new Set<string>(); // live key state: mutated on purpose
   let touch: TouchState = NO_TOUCH; // live gesture state: replaced on each pointer event
   const keydown = (e: Event) => {
-    const { code = '', repeat = false } = e as KeyLike;
-    if (!isGameKey(code)) return;
+    const { code = '', repeat = false, metaKey = false, ctrlKey = false, altKey = false } = e as KeyLike;
+    if (metaKey || ctrlKey || altKey || !isGameKey(code) || within(e, 'button')) return;
     e.preventDefault();
     held.add(code);
     const a = actionFor(code);
@@ -55,7 +69,7 @@ export function attachInput(target: Window, onAction: (a: Action) => void): Inpu
   };
   const keyup = (e: Event) => held.delete((e as KeyLike).code ?? '');
   const feed = (kind: TouchSample['kind']) => (e: PointerEvent) => {
-    if (kind === 'down' && onControl(e)) return;
+    if (kind === 'down' && (onControl(e) || (e.pointerType === 'mouse' && e.button !== 0))) return;
     const r = stepTouch(touch, sampleOf(kind, e));
     touch = r.state;
     if (r.jump) onAction({ type: 'jump' });
