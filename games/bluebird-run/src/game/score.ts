@@ -14,7 +14,8 @@ function read(store: KeyValueStore | null, key: string): string | null {
   if (!store) return null;
   try {
     return store.getItem(key);
-  } catch {
+  } catch (err) {
+    console.warn(`Could not read ${key}:`, err);
     return null;
   }
 }
@@ -35,9 +36,11 @@ export function loadBest(store: KeyValueStore | null): number {
 /** Stores `score` if it beats the saved best; returns the best either way. */
 export function saveBest(store: KeyValueStore | null, score: number): number {
   const prev = loadBest(store);
-  if (score <= prev) return prev;
-  write(store, BEST_KEY, String(score));
-  return score;
+  if (!Number.isFinite(score)) return prev;
+  const next = Math.floor(score);
+  if (next <= prev) return prev;
+  write(store, BEST_KEY, String(next));
+  return next;
 }
 
 export const loadMuted = (store: KeyValueStore | null): boolean => read(store, MUTE_KEY) === '1';

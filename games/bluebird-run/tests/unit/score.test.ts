@@ -27,6 +27,21 @@ describe('best score', () => {
     expect(saveBest(store, 900)).toBe(900);
     expect(loadBest(store)).toBe(900);
   });
+  it('ignores non-finite scores and floors the rest', () => {
+    const store = memory({ [BEST_KEY]: '500' });
+    expect(saveBest(store, Number.NaN)).toBe(500);
+    expect(saveBest(store, Infinity)).toBe(500);
+    expect(loadBest(store)).toBe(500);
+    expect(saveBest(store, 900.7)).toBe(900);
+    expect(store.getItem(BEST_KEY)).toBe('900');
+  });
+  it('warns when reading throws', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const bad: KeyValueStore = { getItem: () => { throw new Error('no'); }, setItem: () => undefined };
+    expect(loadBest(bad)).toBe(0);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
   it('survives a store that throws', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const bad: KeyValueStore = { getItem: () => { throw new Error('no'); }, setItem: () => { throw new Error('no'); } };

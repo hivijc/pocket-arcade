@@ -14,6 +14,12 @@ describe('touch steering', () => {
     expect(touchTurn(run([{ kind: 'down', id: 1, x: 100, y: 0, t: 0 }, { kind: 'move', id: 1, x: 20, y: 0, t: 50 }]).state)).toBe(-1);
     expect(touchTurn(NO_TOUCH)).toBe(0);
   });
+  it('has a dead zone of 4 px around the anchor', () => {
+    const at = (x: number) => run([{ kind: 'down', id: 1, x: 100, y: 0, t: 0 }, { kind: 'move', id: 1, x, y: 0, t: 50 }]).state;
+    expect(touchTurn(at(103))).toBe(0);
+    expect(touchTurn(at(97))).toBe(0);
+    expect(touchTurn(at(112))).toBeCloseTo(0.25);
+  });
   it('holds while any finger is down and releases to 0', () => {
     const down = run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }]);
     expect(touchHeld(down.state)).toBe(true);

@@ -19,7 +19,7 @@ export function trickName(halves: number, grabbed: boolean): string {
 
 /** The trick a clean landing scores, or null if there was nothing to score. */
 export function trickOf(spin: number, grabTime: number): Trick | null {
-  const halves = Math.abs(Math.round(spin / 180));
+  const halves = Math.round(Math.abs(spin) / 180);
   const grabbed = grabTime >= TRICK.grabMin;
   if (halves === 0 && !grabbed) return null;
   const base = halves * TRICK.per180 + (grabbed ? TRICK.grab : 0);

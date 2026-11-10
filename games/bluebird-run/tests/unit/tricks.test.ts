@@ -17,6 +17,11 @@ describe('trickOf', () => {
     expect(trickOf(360, 0)).toEqual({ halves: 2, grabbed: false, points: 300, name: '360' });
     expect(trickOf(-170, 0)).toEqual({ halves: 1, grabbed: false, points: 150, name: '180' });
   });
+  it('rounds the same for either spin direction', () => {
+    expect(trickOf(90, 0)).toEqual(trickOf(-90, 0));
+    expect(trickOf(270, 0)).toEqual(trickOf(-270, 0));
+    expect(trickOf(90, 0)?.halves).toBe(1);
+  });
   it('needs 0.3 s of grab for the grab bonus', () => {
     expect(trickOf(0, 0.29)).toBeNull();
     expect(trickOf(0, 0.3)).toEqual({ halves: 0, grabbed: true, points: 200, name: 'Grab' });

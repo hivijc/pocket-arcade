@@ -34,7 +34,7 @@ export function stepAir(b: Board, controls: Controls, dt: number): Board {
   const air: Air = {
     ...a,
     t: a.t + dt,
-    spin: a.spin + controls.turn * AIR.spinRate * dt,
+    spin: a.spin + Math.max(-1, Math.min(1, controls.turn)) * AIR.spinRate * dt,
     grab: controls.jump ? a.grab + dt : a.grab,
     grabbing: controls.jump,
   };

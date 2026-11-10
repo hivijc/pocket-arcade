@@ -11,6 +11,13 @@ const fly = (b: Board, seconds: number, turn = 0, jump = false): Board => {
   return out;
 };
 
+describe('air control clamping', () => {
+  it('spins turn 2 no faster than turn 1', () => {
+    const b = ollie({ ...newBoard(8, 20), speed: 5 });
+    expect(fly(b, 0.2, 2).air?.spin).toBeCloseTo(fly(b, 0.2, 1).air?.spin ?? NaN);
+  });
+});
+
 describe('ollie', () => {
   it('takes off from the ground only', () => {
     const b = { ...newBoard(8, 20), speed: 5 };

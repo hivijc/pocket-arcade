@@ -51,7 +51,8 @@ export const toRad = (deg: number): number => (deg * Math.PI) / 180;
 export const inPowder = (c: number): boolean => c < SLOPE.powder || c > SLOPE.width - SLOPE.powder;
 
 export function turnHeading(h: number, turn: number, dt: number): number {
-  if (turn !== 0) return clamp(h + turn * BOARD.turnRate * dt, -BOARD.maxHeading, BOARD.maxHeading);
+  const input = clamp(turn, -1, 1);
+  if (input !== 0) return clamp(h + input * BOARD.turnRate * dt, -BOARD.maxHeading, BOARD.maxHeading);
   const step = BOARD.straighten * dt;
   return Math.abs(h) <= step ? 0 : h - Math.sign(h) * step;
 }
@@ -88,6 +89,7 @@ export const canCrash = (b: Board): boolean => b.tumble <= 0 && b.invuln <= 0;
 export const crash = (b: Board): Board => ({ ...b, tumble: CRASH.tumble, air: null, z: 0, regrab: 0 });
 
 export function stepTumble(b: Board, dt: number): Board {
+  if (b.tumble <= 0) return b;
   const tumble = Math.max(0, b.tumble - dt);
   const moved = { ...b, ...travel(b, dt), speed: b.speed * Math.exp(-CRASH.slide * dt), tumble };
   return tumble > 0 ? moved : { ...moved, heading: 0, speed: 0, invuln: CRASH.invuln };

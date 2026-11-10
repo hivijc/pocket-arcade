@@ -60,6 +60,13 @@ describe('movement', () => {
   });
 });
 
+describe('control clamping', () => {
+  it('treats turn 2 like turn 1', () => {
+    expect(turnHeading(0, 2, 0.1)).toBeCloseTo(15);
+    expect(turnHeading(0, -3, 0.1)).toBeCloseTo(-15);
+  });
+});
+
 describe('crash', () => {
   it('tumbles, slides to a stop, then stands up facing downhill with invulnerability', () => {
     const hit = crash({ ...newBoard(8, 50), speed: 6, heading: 40 });
@@ -73,6 +80,10 @@ describe('crash', () => {
     expect(b.invuln).toBe(1.5);
     expect(b.d).toBeGreaterThan(50);
     expect(canCrash(ride(b, 1.6))).toBe(true);
+  });
+  it('does not re-arm invulnerability once the tumble is over', () => {
+    const b = { ...newBoard(8, 50), speed: 2, invuln: 0.3 };
+    expect(stepTumble(b, STEP)).toBe(b);
   });
   it('reports facing as heading plus any spin', () => {
     const b = newBoard(8, 10);

@@ -1,6 +1,6 @@
 /** Pure thumb-drag gesture interpreter (spec §5 Touch). Pointer wiring lives in input.ts. */
 
-export const TOUCH = { fullTurnPx: 48, tapMs: 180, tapPx: 8 } as const;
+export const TOUCH = { fullTurnPx: 48, tapMs: 180, tapPx: 8, deadPx: 4 } as const;
 
 export interface Finger {
   readonly id: number;
@@ -56,7 +56,11 @@ export function stepTouch(s: TouchState, e: TouchSample): { state: TouchState; j
   }
 }
 
-export const touchTurn = (s: TouchState): number => (s.primary ? clamp((s.primary.x - s.primary.x0) / TOUCH.fullTurnPx, -1, 1) : 0);
+export function touchTurn(s: TouchState): number {
+  if (!s.primary) return 0;
+  const dx = s.primary.x - s.primary.x0;
+  return Math.abs(dx) < TOUCH.deadPx ? 0 : clamp(dx / TOUCH.fullTurnPx, -1, 1);
+}
 
 /** Any finger down: in the air this is a grab. */
 export const touchHeld = (s: TouchState): boolean => s.primary !== null || s.others.length > 0;
