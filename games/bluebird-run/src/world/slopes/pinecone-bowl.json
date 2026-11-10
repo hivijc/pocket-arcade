@@ -54,7 +54,7 @@
     { "kind": "snowman", "at": [10, 135] },
     { "kind": "pine", "at": [6, 140] },
     { "kind": "pine", "at": [10, 142] },
-    { "kind": "rock-l", "at": [8, 148] },
+    { "kind": "rock-l", "at": [10.5, 149] },
     { "kind": "pine", "at": [13, 150] },
     { "kind": "rock-s", "at": [8, 165] },
     { "kind": "snowman", "at": [5, 190] },
