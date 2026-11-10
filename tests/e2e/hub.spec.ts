@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('the hub shows both game cards and each Play link reaches its title screen', async ({ page }) => {
+test('the hub shows every game card and each Play link reaches its title screen', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -8,9 +8,10 @@ test('the hub shows both game cards and each Play link reaches its title screen'
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: 'Pocket Arcade' })).toBeVisible();
   const cards = page.getByRole('list', { name: 'Games' }).getByRole('listitem');
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(3);
   await expect(page.getByRole('heading', { name: 'Backyard Mini-Golf' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Paper Route' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bluebird Run' })).toBeVisible();
   for (const img of await page.locator('img.thumb').all()) {
     expect(await img.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBe(320);
   }
@@ -23,6 +24,13 @@ test('the hub shows both game cards and each Play link reaches its title screen'
 
   await page.getByRole('link', { name: 'Play Paper Route' }).click();
   await expect(page).toHaveURL(/\/games\/paper-route\/$/);
+  await expect(page.locator('.overlay.title.on')).toBeVisible();
+  await expect(page.getByRole('link', { name: '← Pocket Arcade' })).toBeVisible();
+
+  await page.getByRole('link', { name: '← Pocket Arcade' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.getByRole('link', { name: 'Play Bluebird Run' }).click();
+  await expect(page).toHaveURL(/\/games\/bluebird-run\/$/);
   await expect(page.locator('.overlay.title.on')).toBeVisible();
   await expect(page.getByRole('link', { name: '← Pocket Arcade' })).toBeVisible();
 

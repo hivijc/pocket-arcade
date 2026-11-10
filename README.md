@@ -22,6 +22,9 @@ https://hivijc.github.io/pocket-arcade/games/paper-route/  Paper Route
   `?course=boardwalk` to open a course, e.g. `/games/minigolf/?phase=night`.
 - **Paper Route**: a daytime bike paper-delivery game, self-contained in
   `games/paper-route/`.
+- **Bluebird Run**: a sunny-day downhill snowboard score run (gates, kickers,
+  spins and grabs), keyboard or iPhone touch, self-contained in `games/bluebird-run/`.
+  `npm run dev:bluebird-run` opens it.
 
 The hub is a plain HTML page (`index.html` + `src/hub/hub.css`). Its card
 thumbnails are real 320x200 captures of each game's first frame, kept in
@@ -57,6 +60,6 @@ nvm use
 npm ci
 npm run dev     # start the dev server
 npm test        # unit tests (Vitest)
-npm run e2e     # end-to-end tests (Playwright)
+npm run e2e     # end-to-end tests (Playwright; starts its own server on port 5199, which must be free)
 npm run build   # production build into dist/
 ```
