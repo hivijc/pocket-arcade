@@ -120,7 +120,7 @@ All numbers are starting values and live in `sim/constants.ts`.
   "Grab", "540 Grab", …) pops up in the HUD.
 
 **Gates**
-- Pairs of flags, alternating blue and red, sit 3–5 tiles apart across the slope. Crossing a gate's
+- Pairs of flags, alternating blue and red, sit 2–6 tiles apart across the slope (most gates use 4). Crossing a gate's
   `d` line between its two flags scores +100, plus +50 for each earlier gate in the current
   unbroken streak. Missing a gate resets the streak and costs nothing else. Touching a flag pole
   counts as passing through and doesn't crash you.
@@ -132,7 +132,7 @@ All numbers are starting values and live in `sim/constants.ts`.
 - **Snowman:** radius 0.35. It bursts into a puff of snow (one-off particles), but still crashes you.
 - **Other riders:** 3–4 friendly skiers and riders in different colours, each following an authored
   slalom path down a section of the slope at 3–4.5 tiles/s. Touching one is a crash for you, and they
-  carry on. They are only active while within 30 tiles of the player.
+  carry on. Each one wakes when the player comes within 30 tiles above its start, then rides its path to the end and leaves the slope.
 - Overlaps are tested between the rider's radius (0.3) and each hazard's footprint circle, only while
   the rider's height is below the hazard's clear height: small rock 0.3, big rock 0.6, snowman 1.0,
   other rider 1.2 and pine 2.0 tiles. An ollie clears only small rocks, and a fast kicker jump can

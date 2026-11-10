@@ -4882,9 +4882,12 @@ git commit -m "feat: Bluebird Run props and rider animations"
   `<scratchpad>/thumb.mjs`:
 
 ```js
-import { chromium } from '@playwright/test';
-import { PNG } from 'pngjs';
+// ES modules ignore NODE_PATH, so resolve the repo's packages from the working directory.
+import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
+const req = createRequire(process.cwd() + '/');
+const { chromium } = req('@playwright/test');
+const { PNG } = req('pngjs');
 
 const [url, out] = process.argv.slice(2);
 const browser = await chromium.launch();
@@ -4910,7 +4913,7 @@ await browser.close();
 ```
 
 Run it from the worktree root, so `@playwright/test` and `pngjs` resolve from `node_modules`:
-`NODE_PATH=$PWD/node_modules node <scratchpad>/thumb.mjs http://localhost:5175/games/bluebird-run/ public/hub/bluebird-run.png`.
+`node <scratchpad>/thumb.mjs http://localhost:5175/games/bluebird-run/ public/hub/bluebird-run.png`.
 Look at the PNG. The rider, some flags and pines should be in frame. If the crop misses them,
 adjust `ox`/`oy` or the wait.
 
