@@ -4,6 +4,7 @@ import { soundsFor } from './audio/sfx-math';
 import { BUF_H, BUF_W, loadContent, type Content } from './content';
 import { attachKeyboard, type Keyboard } from './core/input';
 import { createStepper, startLoop } from './core/loop';
+import { canvasScale, isUserActivation, mergeControls } from './core/touch';
 import { loadBest, saveBest, type KeyValueStore } from './game/score';
 import { clearEvents, initialState, reduce, type Action, type GameState } from './game/state';
 import { bakeToCanvases } from './render/assets';
@@ -14,8 +15,10 @@ import { buildTable, MORNING, postColor, postProcess } from './render/post';
 import { BACKGROUND, renderFrame } from './render/renderer';
 import { bakeChunk, chunkCount } from './render/street-bake';
 import { windStep } from './render/wind';
+import type { Controls } from './sim/bike';
 import { STEP } from './sim/constants';
 import { createHud, type Hud } from './ui/hud';
+import { createTouchControls } from './ui/touch-controls';
 
 const LOAD_ERROR = "Couldn't load Maple Lane — try refreshing";
 const RUNTIME_ERROR = 'Something went wrong — try refreshing';
@@ -28,8 +31,10 @@ function safeStorage(): KeyValueStore | null {
   }
 }
 
-function fitCanvas(canvas: HTMLCanvasElement): void {
-  const scale = Math.max(1, Math.floor(Math.min(window.innerWidth / BUF_W, window.innerHeight / BUF_H)));
+const isTouchDevice = (): boolean => window.matchMedia?.('(pointer: coarse)').matches ?? false;
+
+function fitCanvas(canvas: HTMLCanvasElement, touch: boolean): void {
+  const scale = canvasScale(window.innerWidth, window.innerHeight, BUF_W, BUF_H, touch);
   canvas.style.width = `${BUF_W * scale}px`;
   canvas.style.height = `${BUF_H * scale}px`;
 }
@@ -40,16 +45,18 @@ function matchPageToCanvas(content: Content, table: Uint8Array): void {
   document.documentElement.style.setProperty('--page', `rgb(${r},${g},${b})`);
 }
 
+const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as const;
+
 function wireAudio(): Sfx {
   const sfx = createSfx();
-  // Stay attached until the context is actually running: the first gesture can leave it suspended.
-  const unlock = () => {
-    if (!sfx.unlock()) return;
-    window.removeEventListener('keydown', unlock);
-    window.removeEventListener('pointerdown', unlock);
+  // Stay attached until the context runs after a real activation: on a phone that is the finger lifting
+  // (pointerup/touchend), not the press. Capture phase, so on-screen buttons can't swallow it.
+  const unlock = (e: Event) => {
+    const running = sfx.unlock();
+    if (!running || !isUserActivation(e.type, (e as PointerEvent).pointerType)) return;
+    for (const k of UNLOCK_EVENTS) window.removeEventListener(k, unlock, true);
   };
-  window.addEventListener('keydown', unlock);
-  window.addEventListener('pointerdown', unlock);
+  for (const k of UNLOCK_EVENTS) window.addEventListener(k, unlock, true);
   return sfx;
 }
 
@@ -58,7 +65,10 @@ interface FrameDeps {
   readonly content: Content;
   readonly hud: Hud;
   readonly sfx: Sfx;
-  readonly keys: Keyboard;
+  /** Steer and pedal for this frame (keyboard and touch merged). */
+  readonly controls: () => Controls;
+  /** Called with the state each frame after drawing (shows or hides the touch controls). */
+  readonly afterFrame: (s: GameState) => void;
   readonly getState: () => GameState;
   readonly setState: (s: GameState) => void;
 }
@@ -102,7 +112,7 @@ function createFrame(d: FrameDeps): (dt: number) => void {
   return (dt: number) => {
     time += Math.max(0, dt);
     let state = d.getState();
-    for (let n = steps(dt); n > 0; n--) state = reduce(state, { type: 'tick', dt: STEP, controls: d.keys.controls() }, street);
+    for (let n = steps(dt); n > 0; n--) state = reduce(state, { type: 'tick', dt: STEP, controls: d.controls() }, street);
     if (state.phase === 'over' && prev.phase !== 'over') best = saveBest(storage, state.score);
     // A new run starts back at the start line: jump the camera instead of sweeping down the street.
     if (state.bike.s + 1 < prev.bike.s) cam = cameraTarget(street.length, state.bike.s);
@@ -119,21 +129,39 @@ function createFrame(d: FrameDeps): (dt: number) => void {
     if (ahead < count) prebake(ahead);
     for (const sound of soundsFor(state.events)) d.sfx.play(sound);
     d.hud.update(state, street, best, time);
+    d.afterFrame(state);
     d.setState(clearEvents(state));
   };
 }
 
-function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud): void {
+interface Play {
+  readonly content: Content;
+  readonly hud: Hud;
+  readonly touch: boolean;
+  /** Receives the game's dispatch, so HUD taps made before the run existed can reach it. */
+  readonly bindDispatch: (dispatch: (a: Action) => void) => void;
+}
+
+function runGame(ctx: CanvasRenderingContext2D, { content, hud, touch, bindDispatch }: Play): void {
   let state: GameState = initialState(content.street);
   const dispatch = (a: Action) => {
     state = reduce(state, a, content.street);
   };
-  const keys = attachKeyboard(window, dispatch);
+  bindDispatch(dispatch);
+  const keys: Keyboard = attachKeyboard(window, dispatch);
+  const pad = touch
+    ? createTouchControls(document.getElementById('hud') as HTMLElement, {
+      onToss: (side) => dispatch({ type: 'toss', side }),
+      onPause: () => dispatch({ type: 'togglePause' }),
+    })
+    : null;
+  const controls = (): Controls => (pad ? mergeControls(keys.controls(), pad.controls()) : keys.controls());
+  const afterFrame = (s: GameState) => pad?.setActive(s.phase === 'riding' && !s.paused);
   // Leaving the tab mid-run pauses it rather than riding on unattended.
   window.addEventListener('blur', () => {
     if (state.phase === 'riding' && !state.paused) dispatch({ type: 'togglePause' });
   });
-  const frame = createFrame({ ctx, content, hud, sfx: wireAudio(), keys, getState: () => state, setState: (s) => { state = s; } });
+  const frame = createFrame({ ctx, content, hud, sfx: wireAudio(), controls, afterFrame, getState: () => state, setState: (s) => { state = s; } });
   const stop = startLoop((dt) => {
     try {
       frame(dt);
@@ -150,7 +178,14 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud): voi
 
 async function boot(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
-  const hud = createHud(document.getElementById('hud') as HTMLElement);
+  const touch = isTouchDevice();
+  // Late-bound: the HUD exists before the run does (it also shows load errors).
+  let dispatch: ((a: Action) => void) | null = null;
+  const hud = createHud(document.getElementById('hud') as HTMLElement, {
+    touch,
+    onStart: () => dispatch?.({ type: 'start' }),
+    onResume: () => dispatch?.({ type: 'togglePause' }),
+  });
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) {
     console.error('2D canvas is not available');
@@ -158,10 +193,13 @@ async function boot(): Promise<void> {
     return;
   }
   ctx.imageSmoothingEnabled = false;
-  fitCanvas(canvas);
-  window.addEventListener('resize', () => fitCanvas(canvas));
+  document.documentElement.classList.toggle('touch', touch);
+  const fit = () => fitCanvas(canvas, touch);
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', fit);
   try {
-    runGame(ctx, await loadContent(), hud);
+    runGame(ctx, { content: await loadContent(), hud, touch, bindDispatch: (d) => { dispatch = d; } });
   } catch (err) {
     console.error('Failed to load Paper Route:', err);
     hud.showError(LOAD_ERROR);

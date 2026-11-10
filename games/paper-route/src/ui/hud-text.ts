@@ -27,3 +27,30 @@ export function popupText(events: readonly GameEvent[]): string | null {
   }
   return null;
 }
+
+export interface HudCopy {
+  readonly keys: string;
+  readonly hint: string;
+  readonly titleCta: string;
+  readonly pauseHelp: string;
+  readonly endCta: string;
+}
+
+const KEYBOARD_COPY: HudCopy = {
+  keys: 'A/D or ←/→ steer · W/S speed · J/Q toss left · K/E toss right',
+  hint: 'A/D steer · W/S speed · J/Q toss left · K/E toss right · Esc pause',
+  titleCta: 'Press Enter to ride',
+  pauseHelp: 'Esc to keep riding · R to restart',
+  endCta: 'Press R or Enter to ride again',
+};
+
+const TOUCH_COPY: HudCopy = {
+  keys: 'Left thumb: stick to steer, push up to speed up · Right thumb: ↖ ↘ to toss',
+  hint: '',
+  titleCta: 'Tap to ride',
+  pauseHelp: 'Tap to keep riding',
+  endCta: 'Tap to ride again',
+};
+
+/** The words the HUD uses for keyboard play or for a touch screen. */
+export const hudCopy = (touch: boolean): HudCopy => (touch ? TOUCH_COPY : KEYBOARD_COPY);
