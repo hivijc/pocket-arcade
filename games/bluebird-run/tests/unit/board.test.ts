@@ -88,6 +88,6 @@ describe('crash', () => {
   it('reports facing as heading plus any spin', () => {
     const b = newBoard(8, 10);
     expect(facing({ ...b, heading: 20 })).toBe(20);
-    expect(facing({ ...b, heading: 20, air: { kind: 'ollie', t: 0, duration: 1, peak: 1, base: 0, spin: 180, grab: 0, grabbing: false } })).toBe(200);
+    expect(facing({ ...b, heading: 20, air: { kind: 'ollie', t: 0, duration: 1, peak: 1, base: 0, spin: 180, grab: 0, grabbing: false, grabArmed: false } })).toBe(200);
   });
 });

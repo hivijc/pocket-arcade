@@ -105,7 +105,7 @@ describe('riding', () => {
   });
   it('wipes out on a sideways landing', () => {
     const slope = makeSlope();
-    const air = { kind: 'ollie' as const, t: 0.44, duration: 0.45, peak: 0.5, base: 0, spin: 90, grab: 0, grabbing: false };
+    const air = { kind: 'ollie' as const, t: 0.44, duration: 0.45, peak: 0.5, base: 0, spin: 90, grab: 0, grabbing: false, grabArmed: false };
     const s = tickFor(riding(slope, { board: { ...newRun(slope).board, speed: 5, air } }), slope, 0.05);
     expect(types(s)).toContain('wipeout');
     expect(s.board.tumble).toBeGreaterThan(0);

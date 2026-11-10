@@ -7,7 +7,7 @@ const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 export const canOllie = (b: Board): boolean => b.air === null && b.tumble <= 0 && b.regrab <= 0;
 
 const takeOff = (b: Board, arc: Pick<Air, 'kind' | 'duration' | 'peak' | 'base'>): Board =>
-  ({ ...b, air: { ...arc, t: 0, spin: 0, grab: 0, grabbing: false } });
+  ({ ...b, air: { ...arc, t: 0, spin: 0, grab: 0, grabbing: false, grabArmed: false } });
 
 /** A small hop from the ground (Space / tap). Unchanged when not allowed. */
 export const ollie = (b: Board): Board =>
@@ -31,12 +31,15 @@ export function airHeight(a: Air): number {
 export function stepAir(b: Board, controls: Controls, dt: number): Board {
   if (!b.air) return b;
   const a = b.air;
+  const grabArmed = a.grabArmed || !controls.jump;
+  const grabbing = grabArmed && controls.jump;
   const air: Air = {
     ...a,
     t: a.t + dt,
     spin: a.spin + Math.max(-1, Math.min(1, controls.turn)) * AIR.spinRate * dt,
-    grab: controls.jump ? a.grab + dt : a.grab,
-    grabbing: controls.jump,
+    grab: grabbing ? a.grab + dt : a.grab,
+    grabbing,
+    grabArmed,
   };
   return { ...b, ...travel(b, dt), air, z: airHeight(air), invuln: Math.max(0, b.invuln - dt) };
 }

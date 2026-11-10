@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_TOUCH, stepTouch, touchHeld, touchTurn, type TouchSample, type TouchState } from '../../src/core/touch';
+import { NO_TOUCH, stepTouch, touchGrab, touchTurn, type TouchSample, type TouchState } from '../../src/core/touch';
 
 const run = (samples: TouchSample[]) =>
   samples.reduce<{ state: TouchState; jumps: number }>((acc, e) => {
@@ -20,12 +20,27 @@ describe('touch steering', () => {
     expect(touchTurn(at(97))).toBe(0);
     expect(touchTurn(at(112))).toBeCloseTo(0.25);
   });
-  it('holds while any finger is down and releases to 0', () => {
-    const down = run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }]);
-    expect(touchHeld(down.state)).toBe(true);
+  it('releases steering to 0 when the finger lifts', () => {
     const up = run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }, { kind: 'move', id: 1, x: 140, y: 300, t: 100 }, { kind: 'up', id: 1, x: 140, y: 300, t: 400 }]);
-    expect(touchHeld(up.state)).toBe(false);
+    expect(touchGrab(up.state)).toBe(false);
     expect(touchTurn(up.state)).toBe(0);
+  });
+});
+
+describe('touch grab', () => {
+  it('grabs while the steering finger holds still near its anchor', () => {
+    expect(touchGrab(run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }]).state)).toBe(true);
+    expect(touchGrab(run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }, { kind: 'move', id: 1, x: 111, y: 340, t: 50 }]).state)).toBe(true);
+  });
+  it('does not grab once the finger drags 30 px off the anchor', () => {
+    expect(touchGrab(run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }, { kind: 'move', id: 1, x: 130, y: 300, t: 50 }]).state)).toBe(false);
+  });
+  it('grabs with a second finger even while steering hard', () => {
+    const r = run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }, { kind: 'move', id: 1, x: 160, y: 300, t: 50 }, { kind: 'down', id: 2, x: 300, y: 300, t: 100 }]);
+    expect(touchGrab(r.state)).toBe(true);
+  });
+  it('does not grab with no finger down', () => {
+    expect(touchGrab(NO_TOUCH)).toBe(false);
   });
 });
 

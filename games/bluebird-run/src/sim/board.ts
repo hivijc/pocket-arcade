@@ -23,6 +23,8 @@ export interface Air {
   readonly grab: number;
   /** Grab held on the latest step (drives the pose). */
   readonly grabbing: boolean;
+  /** Jump has been released at least once since take-off, so a press now counts as a grab. */
+  readonly grabArmed: boolean;
 }
 
 export interface Board {

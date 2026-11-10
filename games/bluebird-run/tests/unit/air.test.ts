@@ -22,7 +22,7 @@ describe('ollie', () => {
   it('takes off from the ground only', () => {
     const b = { ...newBoard(8, 20), speed: 5 };
     const up = ollie(b);
-    expect(up.air).toMatchObject({ kind: 'ollie', duration: 0.45, peak: 0.5, base: 0, t: 0, spin: 0, grab: 0 });
+    expect(up.air).toMatchObject({ kind: 'ollie', duration: 0.45, peak: 0.5, base: 0, t: 0, spin: 0, grab: 0, grabArmed: false });
     expect(ollie(up)).toBe(up);
     expect(ollie(crash(b))).toEqual(crash(b));
     expect(canOllie({ ...b, regrab: 0.1 })).toBe(false);
@@ -66,12 +66,29 @@ describe('air step', () => {
     expect(b.d).toBeCloseTo(56, 1);
     expect(b.speed).toBe(6);
   });
-  it('spins at 540°/s with full turn input and builds grab time while jump is held', () => {
-    const b = fly(launch({ ...newBoard(8, 53), speed: 8 }), 0.5, -1, true);
-    expect(b.air!.spin).toBeCloseTo(-270, 0);
+  it('spins at 540°/s with full turn input and builds grab time once jump is released and held again', () => {
+    const released = fly(launch({ ...newBoard(8, 53), speed: 8 }), STEP, -1, false);
+    const b = fly(released, 0.5, -1, true);
+    expect(b.air!.spin).toBeCloseTo(-270 - 9, 0);
     expect(b.air!.grab).toBeCloseTo(0.5, 1);
     expect(b.air!.grabbing).toBe(true);
     expect(fly(b, STEP, 0, false).air!.grabbing).toBe(false);
+  });
+  it('starts unarmed: a jump held from take-off builds no grab', () => {
+    expect(launch(newBoard(8, 53)).air!.grabArmed).toBe(false);
+    const held = fly(ollie({ ...newBoard(8, 20), speed: 5 }), 0.4, 0, true);
+    expect(held.air!.grab).toBe(0);
+    expect(held.air!.grabbing).toBe(false);
+    expect(held.air!.grabArmed).toBe(false);
+  });
+  it('arms on release and grabs on the next press', () => {
+    const b = ollie({ ...newBoard(8, 20), speed: 5 });
+    const armed = fly(fly(b, 0.1, 0, true), STEP, 0, false);
+    expect(armed.air!.grabArmed).toBe(true);
+    expect(armed.air!.grab).toBe(0);
+    const grabbing = fly(armed, 0.2, 0, true);
+    expect(grabbing.air!.grab).toBeCloseTo(0.2, 1);
+    expect(grabbing.air!.grabbing).toBe(true);
   });
   it('touches down on the snow with a short regrab delay', () => {
     const b = touchDown(fly(ollie({ ...newBoard(8, 20), speed: 5 }), 0.5));

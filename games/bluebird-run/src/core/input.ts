@@ -1,6 +1,6 @@
 import type { Action } from '../game/state';
 import type { Controls } from '../sim/board';
-import { NO_TOUCH, stepTouch, touchHeld, touchTurn, type TouchSample, type TouchState } from './touch';
+import { NO_TOUCH, stepTouch, touchGrab, touchTurn, type TouchSample, type TouchState } from './touch';
 
 type Edge = Exclude<Action, { type: 'tick' }>;
 
@@ -71,7 +71,7 @@ export function attachInput(target: Window, onAction: (a: Action) => void): Inpu
   ];
   for (const [type, fn] of listeners) target.addEventListener(type, fn);
   return {
-    controls: () => mergeControls(keyControls(held), { turn: touchTurn(touch), jump: touchHeld(touch) }),
+    controls: () => mergeControls(keyControls(held), { turn: touchTurn(touch), jump: touchGrab(touch) }),
     detach: () => {
       for (const [type, fn] of listeners) target.removeEventListener(type, fn);
     },
