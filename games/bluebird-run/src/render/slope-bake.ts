@@ -8,8 +8,15 @@ export const CHUNK_TILES = 16;
 /** How far below the snow the rock sides hang, tiles. */
 const SIDE_Z = -0.6;
 const FRINGE_R = 3;
+/**
+ * A chunk buffer reaches this far past its own geometry. It must cover the fringe's neighbourhood (a fringe pixel
+ * and the powder it reads are each up to FRINGE_R out), and side-face pixels, which are owned by d + |z|, so they
+ * spill up to |SIDE_Z| * Z_PX px past the corners, plus the fringe around them.
+ */
 const PAD = Math.max(2 * FRINGE_R + 1, Math.ceil(-SIDE_Z * Z_PX) + FRINGE_R + 1);
 const W = SLOPE.width;
+/** Colourise noise amplitude by kind: packed snow is smooth, the rest is lumpier. */
+const NOISE: Readonly<Record<Kind, number>> = { groomed: 0.25, packed: 0.1, powder: 0.25, shade: 0.25, sideC: 0.25, sideD: 0.25 };
 
 export type Kind = 'groomed' | 'packed' | 'powder' | 'shade' | 'sideC' | 'sideD';
 const KINDS: readonly Kind[] = ['groomed', 'packed', 'powder', 'shade', 'sideC', 'sideD'];
@@ -100,9 +107,9 @@ export function chunkBounds(length: number, index: number): PixelRect {
 }
 
 /** Corduroy: faint grooming lines running downhill on groomed snow. */
-function shadeAt(kind: Kind, gx: number, gy: number): number {
+export function shadeAt(kind: Kind, gx: number, gy: number): number {
   if (kind !== 'groomed') return SHADE[kind];
-  return SHADE.groomed + ((((gx >> 1) + gy) & 7) === 0 ? -0.18 : 0);
+  return SHADE.groomed + ((((gx >> 1) - gy) & 7) === 0 ? -0.18 : 0);
 }
 
 interface Offset { readonly dx: number; readonly dy: number; readonly dist: number }
@@ -169,7 +176,7 @@ function colorize(b: PixelRect, k: Classified): Uint8ClampedArray {
         const kind = KINDS[k.kind[i]];
         const ramp = RAMPS[kind];
         const noise = valueNoise(gx, gy, 9, 3) - 0.5;
-        put(out, i, ramp[rampLevel(shadeAt(kind, gx, gy) + noise * 0.25, ramp.length, gx, gy)]);
+        put(out, i, ramp[rampLevel(shadeAt(kind, gx, gy) + noise * NOISE[kind], ramp.length, gx, gy)]);
         continue;
       }
       const dist = nearestPowder(k.kind, b.width, b.height, x, y);

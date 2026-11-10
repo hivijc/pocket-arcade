@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ORIGIN, slopePx } from '../../src/render/iso';
-import { bakeChunk, chunkBounds, chunkCount, chunkRange, groundAt, ownerChunk, pixelKind, RAMPS, type ChunkBake } from '../../src/render/slope-bake';
+import { bakeChunk, chunkBounds, chunkCount, chunkRange, groundAt, ownerChunk, pixelKind, RAMPS, shadeAt, type ChunkBake } from '../../src/render/slope-bake';
 import { makeSlope } from '../helpers/make-slope';
 
 const slope = makeSlope({ length: 100, finish: 80, surfaces: [{ kind: 'packed', rect: [6, 20, 4, 10] }, { kind: 'shade', rect: [6, 25, 2, 2] }] });
@@ -77,5 +77,15 @@ describe('chunks', () => {
   });
   it('uses snow-white ramps for snow', () => {
     expect(RAMPS.powder.at(-1)).toEqual([255, 255, 255]);
+  });
+});
+
+describe('corduroy', () => {
+  const groove = (gx: number, gy: number): boolean => shadeAt('groomed', gx, gy) < shadeAt('packed', gx, gy);
+  it('runs downhill: grooves persist along the fall line and not across it', () => {
+    expect(groove(0, 0)).toBe(true);
+    expect(groove(16, 8)).toBe(true); // one tile downhill
+    expect(groove(4, 2)).toBe(true); // a quarter tile downhill
+    expect(groove(4, -2)).toBe(false); // a quarter tile across
   });
 });
