@@ -71,14 +71,14 @@ chasing monster**. The other riders on the slope are friendly and slow.
   and at least a 12-tile run-out past the finish line (`d = finish`, which the loader enforces) where
   the rider brakes to a stop. Crossing the line in the air settles the landing (and the trick) there.
 - **Camera:** follows the rider's `d` and a heavily damped `c`. The rider is held about one third from
-  the top-left of the buffer (anchor near (130, 85)), so the slope below and ahead stays in view.
+  the top-left of the buffer (anchor at (128, 76)), so the slope below and ahead stays in view.
   Camera motion is smoothed and then rounded to whole buffer pixels, so the scroll never shimmers.
 - **Terrain bake:** the ground is baked in **16-tile chunks** along `d` with Paper Route's chunk
   cache, Bayer dither and fringe code. Surfaces are *groomed* (a faint diagonal corduroy dither),
   *packed trail* (greyer, smoother), *powder* (brighter, with a lumpy fringe where it meets groomed
   snow) and *shade* (ice-blue, under tree clusters). Chunks are baked lazily as they come into view
-  and evicted once they are behind the camera. The slope is a floating diorama strip with snowy-rock
-  sides along its two long edges.
+  and evicted once they are behind the camera. The slope is a floating diorama strip. Rock sides show along the
+  near (screen-left) long edge and the bottom end, the two faces turned to the viewer.
 - **Carve tracks:** the board leaves a live trail of about the last 90 positions, drawn as 1 px
   darker-blue lines, which are deeper on hard carves. They are not baked into the chunks.
 
