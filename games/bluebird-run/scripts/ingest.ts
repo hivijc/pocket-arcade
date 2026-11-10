@@ -85,7 +85,9 @@ function ingestRider(dir: string): void {
 
 const [kind, a, b] = process.argv.slice(2);
 try {
-  if (kind === 'object' && a && b) ingestObject(a, b, Number(process.argv[5] ?? 8));
+  const fps = Number(process.argv[5] ?? 8);
+  if (kind === 'object' && a && b && !(Number.isFinite(fps) && fps > 0)) throw new Error(`fps must be a positive number, got "${process.argv[5]}"`);
+  if (kind === 'object' && a && b) ingestObject(a, b, fps);
   else if (kind === 'rider' && a) ingestRider(a);
   else {
     console.error('Usage: npm run ingest:bluebird-run -- object <name> <png|dir> [fps] | rider <dir>');

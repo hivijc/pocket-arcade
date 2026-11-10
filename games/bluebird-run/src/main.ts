@@ -17,7 +17,7 @@ import { bakeChunk, chunkCount } from './render/slope-bake';
 import { pushTrack, trackPoint, type TrackPoint } from './render/tracks';
 import { STEP } from './sim/constants';
 import { createHud, type Hud } from './ui/hud';
-import { canvasScale } from './ui/layout';
+import { canvasScale, portraitScale } from './ui/layout';
 
 const LOAD_ERROR = "Couldn't load Pinecone Bowl — try refreshing";
 const RUNTIME_ERROR = 'Something went wrong — try refreshing';
@@ -35,7 +35,10 @@ function safeStorage(): KeyValueStore | null {
 }
 
 function fitCanvas(canvas: HTMLCanvasElement): void {
-  const scale = canvasScale(window.innerWidth, window.innerHeight, BUF_W, BUF_H, isTouchDevice());
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const touch = isTouchDevice();
+  const scale = touch && vh > vw ? portraitScale(vw, vh, BUF_W, BUF_H) : canvasScale(vw, vh, BUF_W, BUF_H, touch);
   canvas.style.width = `${Math.floor(BUF_W * scale)}px`;
   canvas.style.height = `${Math.floor(BUF_H * scale)}px`;
 }
@@ -186,6 +189,7 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, bind
       frame(dt);
     } catch (err) {
       console.error('Game loop stopped after an error:', err);
+      sfx.silence(); // the loop no longer drives the carve swish, so stop it hissing under the banner
       hud.showError(RUNTIME_ERROR);
       stop();
     }

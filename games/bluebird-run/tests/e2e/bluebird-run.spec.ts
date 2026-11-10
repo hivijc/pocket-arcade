@@ -22,6 +22,7 @@ test('rides Pinecone Bowl: start, carve, ollie, pause', async ({ page }) => {
   await page.keyboard.press('Space');
   await page.waitForFunction(() => window.__bluebird.getState().board.air !== null);
 
+  await expect(page.locator('[data-stat="score"]')).toHaveText(/^\d+$/);
   const t0 = await page.locator('[data-stat="time"]').textContent();
   await page.waitForTimeout(500);
   await expect(page.locator('[data-stat="time"]')).not.toHaveText(t0 ?? '');

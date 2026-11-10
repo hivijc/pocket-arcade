@@ -11,7 +11,7 @@ A sunny-day isometric pixel-art snowboarding game for desktop and iPhone browser
 skier slang for a cloudless day after fresh snow.) You ride one hand-designed slope, **Pinecone
 Bowl**, from the start hut down to the finish banner. On the way you carve through slalom gates,
 dodge trees, rocks, snowmen and slower riders, launch off kickers for spins and grabs, and pick up
-golden snowflakes. A run takes about 60–75 s and ends with a score made up of gates, tricks,
+golden snowflakes. A run takes about 45–60 s and ends with a score made up of gates, tricks,
 snowflakes and a time bonus. The best score is saved.
 
 It shares the Pocket Arcade look: a 360×270 buffer scaled up in whole pixels, a 32-colour palette,
@@ -150,7 +150,7 @@ All numbers are starting values and live in `sim/constants.ts`.
   and ramp lines. They can be collected on the ground or in the air.
 
 **Finish**
-- Crossing `d = finish` stops the clock. Time bonus = `max(0, 75 − time) × 40`, rounded.
+- Crossing `d = finish` stops the clock. Time bonus = `max(0, par − time) × 40` (par 60 for Pinecone Bowl), rounded.
 - **End card:** score, time, gates (n/N), the best trick, snowflakes (n/N), the best score, and
   "Enter / tap to ride again".
 
@@ -295,7 +295,7 @@ HUD update.
   "name": "Pinecone Bowl",
   "length": 360,
   "finish": 350,
-  "par": 75,
+  "par": 60,
   "surfaces": [ { "kind": "packed", "rect": [5, 40, 4, 30] }, { "kind": "shade", "rect": [2, 100, 3, 8] } ],
   "gates": [ { "d": 30, "c": [6, 10], "color": "blue" } ],
   "ramps": [ { "d": 80, "c": 8 } ],

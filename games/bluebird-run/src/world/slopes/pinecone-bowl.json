@@ -2,7 +2,7 @@
   "name": "Pinecone Bowl",
   "length": 362,
   "finish": 350,
-  "par": 75,
+  "par": 60,
   "surfaces": [
     { "kind": "packed", "rect": [5, 20, 6, 70] },
     { "kind": "shade", "rect": [2, 86, 4, 16] },

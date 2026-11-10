@@ -25,9 +25,9 @@ const POWDER = KINDS.indexOf('powder');
 const hexes = (...h: string[]): RGB[] => h.map(parseHex);
 export const RAMPS: Readonly<Record<Kind | 'lip', readonly RGB[]>> = {
   groomed: hexes('#a9c2e2', '#c9daee', '#e3edf8', '#f4f8ff'),
-  packed: hexes('#8aa6d4', '#a9c2e2', '#b8b8c4', '#c9daee'),
+  packed: hexes('#b8b8c4', '#c9daee', '#e3edf8'),
   powder: hexes('#e3edf8', '#f4f8ff', '#ffffff'),
-  shade: hexes('#4d5f9a', '#6b84bf', '#8aa6d4'),
+  shade: hexes('#8aa6d4', '#a9c2e2', '#c9daee'),
   sideC: hexes('#2c2c3a', '#4a4a5a', '#8a8a96'),
   sideD: hexes('#14141c', '#2c2c3a', '#4a4a5a'),
   lip: hexes('#c9daee', '#f4f8ff', '#ffffff'),
