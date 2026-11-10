@@ -1,15 +1,210 @@
 {
-  "pine": { "placeholder": { "color": "#2f5530", "w": 14, "h": 30 } },
-  "rock-s": { "placeholder": { "color": "#8a8a96", "w": 8, "h": 5 } },
-  "rock-l": { "placeholder": { "color": "#4a4a5a", "w": 16, "h": 10 } },
-  "snowman": { "placeholder": { "color": "#f4f8ff", "w": 12, "h": 20 } },
-  "flag-blue": { "placeholder": { "color": "#3d63c9", "w": 4, "h": 18 } },
-  "flag-red": { "placeholder": { "color": "#c8463c", "w": 4, "h": 18 } },
-  "ramp": { "placeholder": { "color": "#c9daee", "w": 36, "h": 10 } },
-  "flake": { "placeholder": { "color": "#f2c25b", "w": 6, "h": 6 } },
-  "hut": { "placeholder": { "color": "#6b4f3a", "w": 40, "h": 34 } },
-  "banner": { "placeholder": { "color": "#c8463c", "w": 60, "h": 30 } },
-  "skier-red": { "placeholder": { "color": "#c8463c", "w": 10, "h": 22 } },
-  "skier-green": { "placeholder": { "color": "#8fca6c", "w": 10, "h": 22 } },
-  "boarder-purple": { "placeholder": { "color": "#9b5fc0", "w": 10, "h": 22 } }
+  "pine": {
+    "placeholder": {
+      "color": "#2f5530",
+      "w": 14,
+      "h": 30
+    },
+    "image": {
+      "src": "pine.png",
+      "anchor": [
+        13,
+        33
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "rock-s": {
+    "placeholder": {
+      "color": "#8a8a96",
+      "w": 8,
+      "h": 5
+    },
+    "image": {
+      "src": "rock-s.png",
+      "anchor": [
+        7,
+        13
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "rock-l": {
+    "placeholder": {
+      "color": "#4a4a5a",
+      "w": 16,
+      "h": 10
+    },
+    "image": {
+      "src": "rock-l.png",
+      "anchor": [
+        24,
+        37
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "snowman": {
+    "placeholder": {
+      "color": "#f4f8ff",
+      "w": 12,
+      "h": 20
+    },
+    "image": {
+      "src": "snowman.png",
+      "anchor": [
+        17,
+        33
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "flag-blue": {
+    "placeholder": {
+      "color": "#3d63c9",
+      "w": 4,
+      "h": 18
+    },
+    "image": {
+      "src": "flag-blue.png",
+      "anchor": [
+        7,
+        25
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "flag-red": {
+    "placeholder": {
+      "color": "#c8463c",
+      "w": 4,
+      "h": 18
+    },
+    "image": {
+      "src": "flag-red.png",
+      "anchor": [
+        5,
+        25
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "ramp": {
+    "placeholder": {
+      "color": "#c9daee",
+      "w": 36,
+      "h": 10
+    },
+    "image": {
+      "src": "ramp.png",
+      "anchor": [
+        19,
+        33
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "flake": {
+    "placeholder": {
+      "color": "#f2c25b",
+      "w": 6,
+      "h": 6
+    },
+    "image": {
+      "src": "flake.png",
+      "anchor": [
+        8,
+        15
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "hut": {
+    "placeholder": {
+      "color": "#6b4f3a",
+      "w": 40,
+      "h": 34
+    },
+    "image": {
+      "src": "hut.png",
+      "anchor": [
+        18,
+        41
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "banner": {
+    "placeholder": {
+      "color": "#c8463c",
+      "w": 60,
+      "h": 30
+    },
+    "image": {
+      "src": "banner.png",
+      "anchor": [
+        31,
+        59
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "skier-red": {
+    "placeholder": {
+      "color": "#c8463c",
+      "w": 10,
+      "h": 22
+    },
+    "image": {
+      "src": "skier-red.png",
+      "anchor": [
+        13,
+        31
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "skier-green": {
+    "placeholder": {
+      "color": "#8fca6c",
+      "w": 10,
+      "h": 22
+    },
+    "image": {
+      "src": "skier-green.png",
+      "anchor": [
+        15,
+        27
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  },
+  "boarder-purple": {
+    "placeholder": {
+      "color": "#9b5fc0",
+      "w": 10,
+      "h": 22
+    },
+    "image": {
+      "src": "boarder-purple.png",
+      "anchor": [
+        11,
+        29
+      ],
+      "frames": 1,
+      "fps": 8
+    }
+  }
 }

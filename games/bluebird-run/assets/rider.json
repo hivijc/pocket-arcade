@@ -1,0 +1,66 @@
+{
+  "src": "rider.png",
+  "cell": [
+    37,
+    34
+  ],
+  "anchor": [
+    18,
+    33
+  ],
+  "fps": 10,
+  "anims": {
+    "ride": {
+      "frames": 1,
+      "rows": {
+        "south": 0,
+        "south-west": 1,
+        "west": 2,
+        "north-west": 3,
+        "north": 4,
+        "north-east": 5,
+        "east": 6,
+        "south-east": 7
+      }
+    },
+    "air": {
+      "frames": 5,
+      "rows": {
+        "south": 8,
+        "south-west": 9,
+        "west": 10,
+        "north-west": 11,
+        "north": 12,
+        "north-east": 13,
+        "east": 14,
+        "south-east": 15
+      }
+    },
+    "grab": {
+      "frames": 5,
+      "rows": {
+        "south": 16,
+        "south-west": 17,
+        "west": 18,
+        "north-west": 19,
+        "north": 20,
+        "north-east": 21,
+        "east": 22,
+        "south-east": 23
+      }
+    },
+    "tumble": {
+      "frames": 7,
+      "rows": {
+        "south": 24,
+        "south-west": 25,
+        "west": 26,
+        "north-west": 27,
+        "north": 28,
+        "north-east": 29,
+        "east": 30,
+        "south-east": 31
+      }
+    }
+  }
+}
