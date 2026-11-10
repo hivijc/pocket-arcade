@@ -41,5 +41,6 @@ describe('solve', () => {
     const r = solve(hole);
     expect(r.holed).toBe(false);
     expect(r.shots.length).toBeLessThanOrEqual(2);
-  });
+    // An exhaustive search (~2 s alone): the default 5 s budget is too tight when the whole repo's suites run in parallel.
+  }, 20_000);
 });
