@@ -1,7 +1,7 @@
 # Bluebird Run — Design Spec (one-slope slice)
 
 Date: 2026-11-10
-Status: Approved in brainstorming, pending written review
+Status: Approved; slice built (see §13)
 Arcade slot: game #4 in Pocket Arcade (after Backyard Mini-Golf, Paper Route and the trick-shot
 basketball game)
 
@@ -113,8 +113,8 @@ All numbers are starting values and live in `sim/constants.ts`.
 - **Spin:** holding ←/→ (or dragging on touch) while in the air rotates the rider at 540°/s, and the
   sprite steps through all 8 directions. The accumulated rotation is tracked.
 - **Grab:** a fresh press of Space held in the air (the ollie's own press doesn't count until it's
-  released and pressed again), or on touch a finger held still (within 12 px of its anchor) or a
-  second finger held, plays the grab pose, and grab time builds up. Dragging spins instead.
+  released and pressed again), or on touch a fresh touch held still (inside the 4 px turn dead zone)
+  or a second finger held, plays the grab pose, and grab time builds up. Dragging spins instead.
 - **Landing:** a landing is clean if the final spin is within ±35° of any multiple of 180°. Landing
   backwards (switch) is fine and the board flips to face downhill. Otherwise the rider wipes out.
 - **Trick score (clean landings only):** +150 per 180° of spin, plus +200 if the grab was held for at
@@ -300,7 +300,7 @@ HUD update.
   "gates": [ { "d": 30, "c": [6, 10], "color": "blue" } ],
   "ramps": [ { "d": 80, "c": 8 } ],
   "hazards": [
-    { "kind": "tree", "at": [3, 55] },
+    { "kind": "pine", "at": [3, 55] },
     { "kind": "rock-s", "at": [9, 60] },
     { "kind": "rock-l", "at": [12, 64] },
     { "kind": "snowman", "at": [7, 120] }
@@ -406,8 +406,13 @@ HUD update.
 - **Run length:** a clean run is about 45 s, not 60–75 s, so par is 60 (the user's choice). The
   course is 362 long with the finish at 350, and the loader requires at least 12 tiles of run-out.
 - **Grab rule:** on keyboard, a fresh press of Space in the air (the ollie's own press doesn't
-  count). On touch, a finger held still within 12 px of its anchor, or a second finger. Dragging
-  spins. Touch steering has a 4 px dead zone.
+  count). On touch, a fresh touch in the air held inside the 4 px turn dead zone, or a second finger,
+  so a finger either spins or grabs, never both. Touch steering has a 4 px dead zone.
+- **Touch scrolling and zoom** are blocked with `touch-action: none`, `overscroll-behavior: none` and
+  the viewport meta, not with `preventDefault` on touch events. The touch e2e confirms nothing
+  scrolls.
+- **Root wiring:** `.gitignore` (already covered by `games/*/assets/raw/`) and `src/hub/hub.css` (the
+  card reuses the shared classes) didn't need changes.
 - **Ramps:** a jump while riding up a kicker is ignored, so the kicker launches at the lip. Crossing
   the finish in the air settles the landing there: a clean landing scores the trick, and a dirty one
   counts as a wipeout with no tumble.

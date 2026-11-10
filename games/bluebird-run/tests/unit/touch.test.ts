@@ -30,7 +30,12 @@ describe('touch steering', () => {
 describe('touch grab', () => {
   it('grabs while the steering finger holds still near its anchor', () => {
     expect(touchGrab(run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }]).state)).toBe(true);
-    expect(touchGrab(run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }, { kind: 'move', id: 1, x: 111, y: 340, t: 50 }]).state)).toBe(true);
+    expect(touchGrab(run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }, { kind: 'move', id: 1, x: 103, y: 340, t: 50 }]).state)).toBe(true);
+  });
+  it('spins or grabs, never both: any sideways offset that turns stops the grab', () => {
+    const r = run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }, { kind: 'move', id: 1, x: 108, y: 300, t: 50 }]);
+    expect(touchTurn(r.state)).toBeGreaterThan(0);
+    expect(touchGrab(r.state)).toBe(false);
   });
   it('does not grab once the finger drags 30 px off the anchor', () => {
     expect(touchGrab(run([{ kind: 'down', id: 1, x: 100, y: 300, t: 0 }, { kind: 'move', id: 1, x: 130, y: 300, t: 50 }]).state)).toBe(false);

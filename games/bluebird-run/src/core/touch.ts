@@ -1,6 +1,6 @@
 /** Pure thumb-drag gesture interpreter (spec §5 Touch). Pointer wiring lives in input.ts. */
 
-export const TOUCH = { fullTurnPx: 48, tapMs: 180, tapPx: 8, deadPx: 4, stillPx: 12 } as const;
+export const TOUCH = { fullTurnPx: 48, tapMs: 180, tapPx: 8, deadPx: 4 } as const;
 
 export interface Finger {
   readonly id: number;
@@ -62,6 +62,9 @@ export function touchTurn(s: TouchState): number {
   return Math.abs(dx) < TOUCH.deadPx ? 0 : clamp(dx / TOUCH.fullTurnPx, -1, 1);
 }
 
-/** Grab input: the steering finger held within stillPx of its anchor (sideways), or any second finger down. */
+/**
+ * Grab input: the steering finger held inside the turn dead zone (so a finger either spins or grabs, never both), or any
+ * second finger down. Grabs need a fresh press in the air (see Air.grabArmed): touch and hold after take-off.
+ */
 export const touchGrab = (s: TouchState): boolean =>
-  s.others.length > 0 || (s.primary !== null && Math.abs(s.primary.x - s.primary.x0) <= TOUCH.stillPx);
+  s.others.length > 0 || (s.primary !== null && Math.abs(s.primary.x - s.primary.x0) < TOUCH.deadPx);

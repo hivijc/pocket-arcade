@@ -44,6 +44,7 @@ test.describe('iPhone portrait', () => {
   test('tap starts, drag carves, tap ollies', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
+    page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     const t = await startRun(page, [195, 600]);
     expect(await phase(page)).toBe('riding');
 

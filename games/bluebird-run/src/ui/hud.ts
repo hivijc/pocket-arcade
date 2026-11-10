@@ -58,7 +58,7 @@ const setAttr = (e: HTMLElement, name: string, value: string) => {
 };
 
 const KEYS_DESKTOP = '←/→ or A/D carve · Space jump · press Space again in the air to grab · Esc pause';
-const KEYS_TOUCH = 'Drag left/right to carve · tap to jump · hold a finger still in the air to grab';
+const KEYS_TOUCH = 'Drag left/right to carve · tap to jump · touch and hold still in the air to grab';
 
 export function createHud(root: HTMLElement, touch: boolean, cb: HudCallbacks): Hud {
   const bar = el('div', 'bar', root);
