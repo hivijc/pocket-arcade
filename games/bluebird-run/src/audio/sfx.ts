@@ -8,6 +8,8 @@ export interface Sfx {
   /** The continuous carve swish, updated every frame. */
   swish(s: Swish): void;
   setMuted(muted: boolean): void;
+  /** Cuts the carve swish at once (hidden tab, page leaving). The next swish() call brings it back. */
+  silence(): void;
 }
 
 interface Graph {
@@ -18,7 +20,7 @@ interface Graph {
   readonly swishFilter: BiquadFilterNode;
 }
 
-const SILENT: Sfx = { unlock: () => true, play() {}, swish() {}, setMuted() {} };
+const SILENT: Sfx = { unlock: () => true, play() {}, swish() {}, setMuted() {}, silence() {} };
 const VOLUME = 0.7;
 
 function noiseBuffer(ac: AudioContext): AudioBuffer {
@@ -73,8 +75,10 @@ const RECIPES: Readonly<Record<Sound, (g: Graph, pitch?: number) => void>> = {
 };
 
 function resumeIfSuspended(g: Graph): boolean {
-  if (g.ac.state === 'running') return true;
-  if (g.ac.state === 'suspended') void g.ac.resume().catch(() => undefined);
+  const state: string = g.ac.state;
+  if (state === 'running') return true;
+  // 'suspended', or 'interrupted' on iOS: anything but closed can be resumed.
+  if (state !== 'closed') void g.ac.resume().catch(() => undefined);
   return false;
 }
 
@@ -128,6 +132,13 @@ export function createSfx(): Sfx {
       const t = graph.ac.currentTime;
       graph.swishGain.gain.setTargetAtTime(s.level, t, 0.05);
       graph.swishFilter.frequency.setTargetAtTime(s.cutoff, t, 0.05);
+    },
+    silence() {
+      if (!graph) return;
+      const { gain } = graph.swishGain;
+      const t = graph.ac.currentTime;
+      gain.cancelScheduledValues(t);
+      gain.setValueAtTime(0, t);
     },
     setMuted(m) {
       muted = m;

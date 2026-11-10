@@ -149,7 +149,12 @@ function standing(ctx: CanvasRenderingContext2D, scene: Scene, view: View): Draw
     return p ? [at(r.look, p.c, p.d)] : [];
   });
   const player: Drawable = { depth: depthOf(st.board.c, st.board.d), draw: () => drawPlayer(ctx, scene, view) };
-  return [...hazards, ...flags, ...flakes, ...riders, at('hut', HUT_AT[0], HUT_AT[1]), at('banner', SLOPE.width / 2, slope.finish), player];
+  // The banner spans the whole slope, so sort it by d alone: in front of the rider until they pass the line, behind after.
+  const banner: Drawable = {
+    depth: st.board.d > slope.finish ? slope.finish : slope.finish + SLOPE.width,
+    draw: () => drawSprite(ctx, scene, view, 'banner', SLOPE.width / 2, slope.finish),
+  };
+  return [...hazards, ...flags, ...flakes, ...riders, at('hut', HUT_AT[0], HUT_AT[1]), banner, player];
 }
 
 function drawParticles(ctx: CanvasRenderingContext2D, view: View, ps: readonly Particle[]): void {

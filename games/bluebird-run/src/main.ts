@@ -173,6 +173,11 @@ function runGame(ctx: CanvasRenderingContext2D, content: Content, hud: Hud, bind
   window.addEventListener('blur', () => {
     if ((state.phase === 'riding' || state.phase === 'countdown') && !state.paused) dispatch({ type: 'togglePause' });
   });
+  // A hidden tab keeps its audio context alive: cut the looping swish so it doesn't hiss in the background.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) sfx.silence();
+  });
+  window.addEventListener('pagehide', () => sfx.silence());
   const frame = createFrame({
     ctx, content, hud, sfx, input, storage, muted: () => muted, getState: () => state, setState: (s) => { state = s; },
   });

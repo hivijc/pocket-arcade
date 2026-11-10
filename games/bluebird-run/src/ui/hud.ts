@@ -36,12 +36,14 @@ function overlay(root: HTMLElement, name: string): [HTMLElement, HTMLElement] {
   return [o, el('div', 'card', o)];
 }
 
-function button(parent: HTMLElement, label: string, text: string, onTap: () => void): HTMLButtonElement {
+function button(parent: HTMLElement, text: string, onTap: () => void): HTMLButtonElement {
   const b = el('button', '', parent, text);
   b.type = 'button';
-  b.setAttribute('aria-label', label);
+  // A mouse click must not leave focus on the button, or core/input ignores the game keys.
+  b.addEventListener('mousedown', (e) => e.preventDefault());
   b.addEventListener('click', (e) => {
     e.stopPropagation();
+    b.blur();
     onTap();
   });
   return b;
@@ -51,8 +53,12 @@ const setText = (e: HTMLElement, text: string) => {
   if (e.textContent !== text) e.textContent = text;
 };
 
-const KEYS_DESKTOP = '←/→ or A/D carve · Space jump, hold in the air to grab · Esc pause';
-const KEYS_TOUCH = 'Drag left/right to carve · tap to jump · keep a finger down in the air to grab';
+const setAttr = (e: HTMLElement, name: string, value: string) => {
+  if (e.getAttribute(name) !== value) e.setAttribute(name, value);
+};
+
+const KEYS_DESKTOP = '←/→ or A/D carve · Space jump · press Space again in the air to grab · Esc pause';
+const KEYS_TOUCH = 'Drag left/right to carve · tap to jump · hold a finger still in the air to grab';
 
 export function createHud(root: HTMLElement, touch: boolean, cb: HudCallbacks): Hud {
   const bar = el('div', 'bar', root);
@@ -62,9 +68,9 @@ export function createHud(root: HTMLElement, touch: boolean, cb: HudCallbacks): 
   if (!touch) el('div', 'hint', root, KEYS_DESKTOP);
 
   const buttons = el('div', 'buttons', root);
-  const pauseBtn = button(buttons, 'Pause', 'Pause', cb.onPause);
-  const retryBtn = button(buttons, 'Retry', 'Retry', cb.onRetry);
-  const muteBtn = button(buttons, 'Mute', 'Sound', cb.onMute);
+  const pauseBtn = button(buttons, 'Pause', cb.onPause);
+  const retryBtn = button(buttons, 'Retry', cb.onRetry);
+  const muteBtn = button(buttons, 'Mute', cb.onMute);
   pauseBtn.hidden = !touch;
   retryBtn.hidden = !touch;
 
@@ -77,7 +83,7 @@ export function createHud(root: HTMLElement, touch: boolean, cb: HudCallbacks): 
 
   const [pause, pauseCard] = overlay(root, 'pause');
   el('h1', '', pauseCard, 'Paused');
-  el('p', '', pauseCard, touch ? 'Tap Pause to keep riding · Retry to restart' : 'Esc to keep riding · R to restart');
+  el('p', '', pauseCard, touch ? 'Tap Resume to keep riding · Retry to restart' : 'Esc to keep riding · R to restart');
 
   const [end, endCard] = overlay(root, 'end');
   el('h1', '', endCard, 'Run complete!');
@@ -104,8 +110,11 @@ export function createHud(root: HTMLElement, touch: boolean, cb: HudCallbacks): 
       setText(count, countdownText(s.phase === 'countdown' ? s.clock : 0));
       bar.classList.toggle('on', s.phase !== 'title');
       buttons.classList.toggle('on', s.phase !== 'title');
-      setText(muteBtn, muted ? 'Muted' : 'Sound');
-      muteBtn.setAttribute('aria-pressed', String(muted));
+      setText(muteBtn, muted ? 'Unmute' : 'Mute');
+      setAttr(muteBtn, 'aria-pressed', String(muted));
+      setText(pauseBtn, s.paused ? 'Resume' : 'Pause');
+      if (s.paused) setAttr(pauseBtn, 'aria-label', 'Resume');
+      else if (pauseBtn.hasAttribute('aria-label')) pauseBtn.removeAttribute('aria-label');
       title.classList.toggle('on', s.phase === 'title');
       setText(titleBest, `Best: ${best}`);
       pause.classList.toggle('on', s.paused);
