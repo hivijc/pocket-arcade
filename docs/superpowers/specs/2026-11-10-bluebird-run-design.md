@@ -68,7 +68,8 @@ chasing monster**. The other riders on the slope are friendly and slow.
   | 14–16 | right powder edge, lined with pines |
 
 - **Length:** about 360 tiles. That's a 10-tile start apron at the hut, about 340 tiles of course,
-  and a 10-tile run-out past the finish line (`d = finish`) where the rider brakes to a stop.
+  and at least a 12-tile run-out past the finish line (`d = finish`, which the loader enforces) where
+  the rider brakes to a stop. Crossing the line in the air settles the landing (and the trick) there.
 - **Camera:** follows the rider's `d` and a heavily damped `c`. The rider is held about one third from
   the top-left of the buffer (anchor near (130, 85)), so the slope below and ahead stays in view.
   Camera motion is smoothed and then rounded to whole buffer pixels, so the scroll never shimmers.
@@ -111,8 +112,9 @@ All numbers are starting values and live in `sim/constants.ts`.
 **Tricks**
 - **Spin:** holding ←/→ (or dragging on touch) while in the air rotates the rider at 540°/s, and the
   sprite steps through all 8 directions. The accumulated rotation is tracked.
-- **Grab:** holding Space (or keeping a finger down without dragging) while in the air plays the grab
-  pose, and grab time builds up.
+- **Grab:** a fresh press of Space held in the air (the ollie's own press doesn't count until it's
+  released and pressed again), or on touch a finger held still (within 12 px of its anchor) or a
+  second finger held, plays the grab pose, and grab time builds up. Dragging spins instead.
 - **Landing:** a landing is clean if the final spin is within ±35° of any multiple of 180°. Landing
   backwards (switch) is fine and the board flips to face downhill. Otherwise the rider wipes out.
 - **Trick score (clean landings only):** +150 per 180° of spin, plus +200 if the grab was held for at
@@ -170,7 +172,8 @@ finish run-out → end card.
   (proportional, not just on/off). Releasing returns the input to 0.
 - **Jump:** a quick tap (shorter than 180 ms and moving less than 8 px) does an ollie. A second finger
   touching down while the first is steering also does an ollie.
-- **In the air:** any finger held down means grab, and the drag offset spins.
+- **In the air:** the drag offset spins. A finger held still near its anchor, or a second finger
+  held down, grabs (see Grab above).
 - On-screen buttons in the HUD for pause and retry. Tapping the title and end cards starts or
   continues.
 - A small hint on the title card ("drag to carve · tap to jump") appears on touch devices, and the
@@ -188,7 +191,7 @@ finish run-out → end card.
 | wipeout / crash | a crunchy noise burst |
 | gate passed | a chime that steps up in pitch with the streak (resetting with it) |
 | snowflake | a high tick |
-| countdown | beep, beep, higher beep |
+| countdown | beep, beep, beep, then a higher "go" beep |
 | finish | a short rising sting (three notes, not music) |
 
 Audio starts on the first user gesture, as iOS requires. A mute toggle in the HUD is stored in

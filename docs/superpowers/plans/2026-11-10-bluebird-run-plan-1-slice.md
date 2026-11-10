@@ -3182,7 +3182,7 @@ export async function loadContent(): Promise<Content> {
 importing cleanly now, write a minimal placeholder `G/src/world/slopes/pinecone-bowl.json`:
 
 ```json
-{ "name": "Pinecone Bowl", "length": 360, "finish": 350, "par": 75, "surfaces": [], "gates": [], "ramps": [], "hazards": [], "riders": [], "flakes": [] }
+{ "name": "Pinecone Bowl", "length": 362, "finish": 350, "par": 75, "surfaces": [], "gates": [], "ramps": [], "hazards": [], "riders": [], "flakes": [] }
 ```
 
 - [ ] **Step 5: Implement the renderer**
@@ -4022,7 +4022,7 @@ over rocks (220–290), and a tight finish slalom with the last kicker (290–35
 ```json
 {
   "name": "Pinecone Bowl",
-  "length": 360,
+  "length": 362,
   "finish": 350,
   "par": 75,
   "surfaces": [

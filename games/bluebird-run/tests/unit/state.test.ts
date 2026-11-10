@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { clearEvents, initialState, newRun, reduce, type GameState } from '../../src/game/state';
 import type { Controls } from '../../src/sim/board';
+import { ollie } from '../../src/sim/air';
 import { STEP } from '../../src/sim/constants';
 import type { Slope } from '../../src/world/slope';
 import { makeSlope } from '../helpers/make-slope';
@@ -131,5 +132,44 @@ describe('finish', () => {
     expect(end.phase).toBe('over');
     expect(end.time).toBe(s.time);
     expect(reduce(end, { type: 'jump' }, slope).phase).toBe('countdown');
+  });
+});
+
+describe('kicker and finish in the air', () => {
+  it('ignores an ollie while the board is rising up a ramp, so the kicker still launches', () => {
+    const slope = makeSlope({ ramps: [{ d: 10, c: 8 }] });
+    const onRamp = riding(slope, { board: { ...newRun(slope).board, c: 8, d: 12.9, speed: 6, z: 0.45 } });
+    const jumped = reduce(onRamp, { type: 'jump' }, slope);
+    expect(jumped.board.air).toBeNull();
+    expect(jumped.events).toEqual([]);
+    const after = tickFor(jumped, slope, 0.1);
+    expect(types(after)).toContain('launch');
+    expect(after.board.air?.kind).toBe('ramp');
+  });
+
+  const airborne = (slope: Slope, spin: number, grab: number): GameState => {
+    const base = ollie({ ...newRun(slope).board, c: 8, d: 19.9, speed: 8 });
+    return riding(slope, { board: { ...base, air: { ...base.air!, t: 0.05, spin, grab } } });
+  };
+  it('settles a clean landing when the finish is crossed in the air and keeps the trick', () => {
+    const slope = makeSlope({ length: 60, finish: 20 });
+    const s = tickFor(airborne(slope, 360, 0.5), slope, 0.05);
+    expect(s.phase).toBe('runout');
+    expect(s.board.air).toBeNull();
+    expect(s.board.z).toBe(0);
+    expect(s.tricks).toBe(1);
+    expect(s.bestTrick?.name).toBe('360 Grab');
+    expect(s.score).toBe(s.bestTrick!.points + s.bonus);
+    expect(types(s)).toContain('land');
+  });
+  it('wipes out without tumbling when the finish is crossed in the air sideways', () => {
+    const slope = makeSlope({ length: 60, finish: 20 });
+    const s = tickFor(airborne(slope, 90, 0), slope, 0.05);
+    expect(s.phase).toBe('runout');
+    expect(types(s)).toContain('wipeout');
+    expect(types(s)).not.toContain('land');
+    expect(s.board.air).toBeNull();
+    expect(s.board.tumble).toBe(0);
+    expect(s.tricks).toBe(0);
   });
 });

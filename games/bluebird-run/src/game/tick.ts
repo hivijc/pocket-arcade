@@ -28,17 +28,24 @@ const ramps: Step = (s, slope, prev) => {
   return slope.ramps.some((r) => crossedLip(r, prev.d, s.board)) ? emit({ ...s, board: launch(s.board) }, { type: 'launch' }) : s;
 };
 
-const landing: Step = (s) => {
+/** Settles an airborne board onto the snow: scores a clean landing; a dirty one wipes out (tumbling only when `tumbles`). */
+function settle(s: GameState, tumbles: boolean): GameState {
   const b = s.board;
-  if (!hasLanded(b) || !b.air) return s;
-  if (!isCleanLanding(b.air.spin)) return crashed(s, { type: 'wipeout' });
+  if (!b.air) return s;
+  if (!isCleanLanding(b.air.spin)) {
+    return tumbles
+      ? crashed(s, { type: 'wipeout' })
+      : emit({ ...s, board: touchDown(b), crashes: s.crashes + 1 }, { type: 'wipeout' });
+  }
   const trick = trickOf(b.air.spin, b.air.grab);
   const bestTrick = trick && (!s.bestTrick || trick.points > s.bestTrick.points) ? trick : s.bestTrick;
   return emit(
     { ...s, board: touchDown(b), score: s.score + (trick?.points ?? 0), tricks: s.tricks + (trick ? 1 : 0), bestTrick },
     { type: 'land', trick },
   );
-};
+}
+
+const landing: Step = (s) => (hasLanded(s.board) ? settle(s, true) : s);
 
 const hazards: Step = (s, slope) => {
   const b = s.board;
@@ -77,9 +84,9 @@ const flakes: Step = (s, slope) => {
 const finish: Step = (s, slope) => {
   if (s.board.d < slope.finish) return s;
   const bonus = timeBonus(s.time, slope.par);
-  const board = s.board.air ? touchDown(s.board) : s.board;
+  const landed = settle(s, false);
   return emit(
-    { ...s, phase: 'runout', clock: RUN.runout, finishTime: s.time, bonus, score: s.score + bonus, board },
+    { ...landed, phase: 'runout', clock: RUN.runout, finishTime: s.time, bonus, score: landed.score + bonus },
     { type: 'finish', time: s.time, bonus },
   );
 };

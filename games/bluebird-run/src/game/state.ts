@@ -75,6 +75,7 @@ function stepRunout(s: GameState, dt: number): GameState {
 function jump(s: GameState, slope: Slope): GameState {
   if (s.phase === 'title' || s.phase === 'over') return newRun(slope);
   if (s.phase !== 'riding' || s.paused) return s;
+  if (s.board.air === null && s.board.z > 0) return s; // rising up a kicker: let it launch
   const board = ollie(s.board);
   return board === s.board ? s : emit({ ...s, board }, { type: 'ollie' });
 }
