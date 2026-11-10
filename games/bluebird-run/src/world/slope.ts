@@ -128,7 +128,8 @@ function checkGateOrder(gates: readonly Gate[]): void {
 
 const onRamp = (r: Ramp, [c, d]: Vec2, pad: number): boolean =>
   Math.abs(c - r.c) <= AIR.rampHalfWidth + pad && d >= r.d - pad && d <= r.d + AIR.rampLen + pad;
-const inGate = (g: Gate, [c, d]: Vec2): boolean => Math.abs(d - g.d) < 0.6 && c > g.c[0] && c < g.c[1];
+const inGate = (g: Gate, [c, d]: Vec2, pad: number): boolean =>
+  Math.abs(d - g.d) < GATE.lineWindow && c > g.c[0] - pad && c < g.c[1] + pad;
 
 function checkHazards(s: Slope): void {
   s.hazards.forEach((h, i) => {
@@ -136,7 +137,7 @@ function checkHazards(s: Slope): void {
     if (h.at[1] < RUN.safeStart) fail(`${f} is within the start area (d < ${RUN.safeStart})`);
     const r = s.ramps.findIndex((ramp) => onRamp(ramp, h.at, HAZARD_R[h.kind]));
     if (r >= 0) fail(`${f} sits on ramps[${r}]`);
-    const g = s.gates.findIndex((gate) => inGate(gate, h.at));
+    const g = s.gates.findIndex((gate) => inGate(gate, h.at, HAZARD_R[h.kind]));
     if (g >= 0) fail(`${f} sits inside gates[${g}]`);
   });
 }
@@ -144,17 +145,22 @@ function checkHazards(s: Slope): void {
 const BORDER = { from: 6, step: 1.6, density: 0.7 } as const;
 
 /** Seeded pines along both powder edges (0.5–1.5 and 14.5–15.5 across), so the edges never need listing by hand. */
-export function borderPines(length: number): Hazard[] {
+export function borderPines(length: number, ramps: readonly Ramp[] = [], gates: readonly Gate[] = []): Hazard[] {
+  const pad = HAZARD_R.pine;
+  const clear = (at: Vec2): boolean => !ramps.some((r) => onRamp(r, at, pad)) && !gates.some((g) => inGate(g, at, pad));
   const rows = Math.ceil((length - BORDER.from) / BORDER.step);
   return Array.from({ length: rows }, (_, i) => i).flatMap((i) =>
     [0, 1].flatMap((side): Hazard[] => {
       if (hash2(i, side, 41) > BORDER.density) return [];
       const c = side === 0 ? 0.5 + hash2(i, side, 42) : SLOPE.width - 1.5 + hash2(i, side, 42);
       const d = BORDER.from + i * BORDER.step + hash2(i, side, 43) * 0.8;
-      return d < length ? [{ kind: 'pine', at: [c, d] }] : [];
+      const at: Vec2 = [c, d];
+      return d < length && clear(at) ? [{ kind: 'pine', at }] : [];
     }),
   );
 }
+
+const TOP_KEYS: readonly string[] = ['name', 'length', 'finish', 'par', 'surfaces', 'gates', 'ramps', 'hazards', 'riders', 'flakes'];
 
 export interface ParseOptions {
   /** Add the seeded border pines (default true). */
@@ -163,6 +169,9 @@ export interface ParseOptions {
 
 export function parseSlope(raw: unknown, opts: ParseOptions = {}): Slope {
   const o = obj(raw, 'the slope');
+  Object.keys(o).forEach((k) => {
+    if (!TOP_KEYS.includes(k)) fail(`unknown key "${k}"`);
+  });
   if (typeof o.name !== 'string' || o.name === '') fail('name must be a non-empty string');
   if (!Number.isInteger(o.length) || (o.length as number) < 50) fail('length must be a whole number of at least 50');
   const length = o.length as number;
@@ -183,5 +192,5 @@ export function parseSlope(raw: unknown, opts: ParseOptions = {}): Slope {
     flakes: list(o, 'flakes').map((v, i) => point(v, `flakes[${i}]`, length)),
   };
   checkHazards(slope);
-  return opts.borders === false ? slope : { ...slope, hazards: [...slope.hazards, ...borderPines(length)] };
+  return opts.borders === false ? slope : { ...slope, hazards: [...slope.hazards, ...borderPines(length, slope.ramps, slope.gates)] };
 }

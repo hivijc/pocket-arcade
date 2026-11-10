@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AIR, GATE, HAZARD_R } from '../../src/sim/constants';
 import { borderPines, parseSlope, SlopeError } from '../../src/world/slope';
 import { makeSlope, rawSlope } from '../helpers/make-slope';
 
@@ -42,6 +43,8 @@ describe('parseSlope', () => {
     ['a rider with no speed', rawSlope({ riders: [{ look: 'skier-red', speed: 0, path: [[8, 40], [5, 60]] }] }), /riders\[0\].*speed/],
     ['a rider going uphill', rawSlope({ riders: [{ look: 'skier-red', speed: 3, path: [[8, 60], [5, 40]] }] }), /riders\[0\]\.path.*downhill/],
     ['an unknown rider look', rawSlope({ riders: [{ look: 'yeti', speed: 3, path: [[8, 40], [5, 60]] }] }), /riders\[0\]\.look/],
+    ['an unknown top-level key', rawSlope({ hazard: [] }), /unknown key "hazard"/],
+    ['a rock-l grazing a gate flag', rawSlope({ gates: [{ d: 30, c: [6, 10], color: 'blue' }], hazards: [{ kind: 'rock-l', at: [5.8, 30] }] }), /hazards\[0\].*gates\[0\]/],
     ['a one-point rider path', rawSlope({ riders: [{ look: 'skier-red', speed: 3, path: [[8, 40]] }] }), /riders\[0\]\.path/],
   ])('rejects %s', (_label, raw, msg) => {
     expect(() => parseSlope(raw, { borders: false })).toThrow(SlopeError);
@@ -52,6 +55,25 @@ describe('parseSlope', () => {
     const s = parseSlope(rawSlope());
     expect(s.hazards.length).toBeGreaterThan(20);
     expect(s.hazards.every((h) => h.kind === 'pine')).toBe(true);
+  });
+});
+
+describe('border pines vs ramps and gates', () => {
+  it('drops pines that would sit on a ramp or inside a gate', () => {
+    const ramps = [{ d: 20, c: 1.5 }];
+    const gates = [{ d: 40, c: [2, 6] as const, color: 'blue' as const }];
+    const pad = HAZARD_R.pine;
+    const onRamp = (c: number, d: number): boolean =>
+      Math.abs(c - 1.5) <= AIR.rampHalfWidth + pad && d >= 20 - pad && d <= 20 + AIR.rampLen + pad;
+    const inGate = (c: number, d: number): boolean =>
+      Math.abs(d - 40) < GATE.lineWindow && c > 2 - pad && c < 6 + pad;
+    const all = borderPines(120);
+    expect(all.some((h) => onRamp(...h.at) || inGate(...h.at))).toBe(true); // the scenario really collides
+    const kept = borderPines(120, ramps, gates);
+    expect(kept.length).toBeLessThan(all.length);
+    expect(kept.some((h) => onRamp(...h.at) || inGate(...h.at))).toBe(false);
+    const s = parseSlope(rawSlope({ ramps: [{ d: 20, c: 1.5 }], gates: [{ d: 40, c: [2, 6], color: 'blue' }] }));
+    expect(s.hazards.some((h) => onRamp(...h.at) || inGate(...h.at))).toBe(false);
   });
 });
 

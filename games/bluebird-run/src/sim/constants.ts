@@ -42,7 +42,7 @@ export const AIR = {
 
 export const TRICK = { window: 35, per180: 150, grab: 200, grabMin: 0.3, styleMin: 360, style: 1.5 } as const;
 
-export const GATE = { base: 100, streak: 50, poleSlack: 0.3, minGap: 2, maxGap: 6 } as const;
+export const GATE = { base: 100, streak: 50, poleSlack: 0.3, minGap: 2, maxGap: 6, lineWindow: 0.6 } as const;
 
 export const FLAKE = { points: 25, radius: 0.4 } as const;
 
