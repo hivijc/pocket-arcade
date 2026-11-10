@@ -1,5 +1,5 @@
 import { ollie } from '../sim/air';
-import { newBoard, travel, turnHeading, type Board, type Controls } from '../sim/board';
+import { newBoard, stepTumble, travel, turnHeading, type Board, type Controls } from '../sim/board';
 import { RUN } from '../sim/constants';
 import { NO_GATES, type GateProgress } from '../sim/gates';
 import type { Trick } from '../sim/tricks';
@@ -63,13 +63,20 @@ function stepCountdown(s: GameState, dt: number): GameState {
   return Math.ceil(clock) < Math.ceil(s.clock) ? emit(next, { type: 'beep', n: Math.ceil(clock) }) : next;
 }
 
-/** After the line: straighten, brake to a stop, then the end card. */
+/** After the line: tumble out or straighten and brake so the board is stopped when the end card shows. */
 function stepRunout(s: GameState, dt: number): GameState {
   const b = s.board;
-  const slowed = { ...b, heading: turnHeading(b.heading, 0, dt), speed: Math.max(0, b.speed - RUN.runoutBrake * dt) };
-  const board = { ...slowed, ...travel(slowed, dt) };
   const clock = s.clock - dt;
-  return clock <= 0 ? { ...s, board, clock: 0, phase: 'over' } : { ...s, board, clock };
+  const moved = b.tumble > 0 ? stepTumble(b, dt) : brake(b, s.clock, dt);
+  const board = { ...moved, invuln: Math.max(0, moved.invuln - dt) };
+  if (clock > 0) return { ...s, board, clock };
+  return { ...s, board: { ...board, speed: 0, tumble: 0, invuln: 0 }, clock: 0, phase: 'over' };
+}
+
+function brake(b: Board, clock: number, dt: number): Board {
+  const decel = Math.max(RUN.runoutBrake, b.speed / Math.max(clock, 1e-3));
+  const slowed = { ...b, heading: turnHeading(b.heading, 0, dt), speed: Math.max(0, b.speed - decel * dt) };
+  return { ...slowed, ...travel(slowed, dt) };
 }
 
 function jump(s: GameState, slope: Slope): GameState {

@@ -173,3 +173,30 @@ describe('kicker and finish in the air', () => {
     expect(s.tricks).toBe(0);
   });
 });
+
+describe('run-out', () => {
+  const slope = makeSlope({ length: 60, finish: 20 });
+  const runout = (board: Partial<GameState['board']>): GameState =>
+    ({ ...newRun(slope), phase: 'runout', clock: 1.5, events: [], board: { ...newRun(slope).board, ...board } });
+  it('brakes from 8 tiles/s to a dead stop by the end card', () => {
+    const end = tickFor(runout({ speed: 8 }), slope, 1.6);
+    expect(end.phase).toBe('over');
+    expect(end.board.speed).toBe(0);
+  });
+  it('ends a tumble in progress: over, upright and still', () => {
+    const end = tickFor(runout({ speed: 6, tumble: 3, invuln: 1 }), slope, 1.6);
+    expect(end.phase).toBe('over');
+    expect(end.board.tumble).toBe(0);
+    expect(end.board.speed).toBe(0);
+    expect(end.board.invuln).toBe(0);
+  });
+  it('counts invulnerability down during the run-out', () => {
+    const mid = tickFor(runout({ speed: 4, invuln: 1 }), slope, 0.5);
+    expect(mid.board.invuln).toBeCloseTo(0.5);
+  });
+  it('lets a tumble play out with the tumble stepper rather than braking', () => {
+    const mid = tickFor(runout({ speed: 6, tumble: 1 }), slope, 0.5);
+    expect(mid.board.tumble).toBeCloseTo(0.5);
+    expect(mid.board.speed).toBeGreaterThan(0);
+  });
+});

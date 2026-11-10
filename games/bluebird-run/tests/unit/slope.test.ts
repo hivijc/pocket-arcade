@@ -27,6 +27,7 @@ describe('parseSlope', () => {
     ['an empty name', rawSlope({ name: '' }), /name/],
     ['a short length', rawSlope({ length: 30 }), /length/],
     ['a finish past the end', rawSlope({ finish: 120 }), /finish/],
+    ['a finish with no run-out room', rawSlope({ finish: 109 }), /finish must leave at least 12 tiles of run-out/],
     ['no par', rawSlope({ par: 0 }), /par/],
     ['an off-slope flake', rawSlope({ flakes: [[17, 10]] }), /flakes\[0\].*off the slope/],
     ['a bad surface kind', rawSlope({ surfaces: [{ kind: 'ice', rect: [1, 1, 1, 1] }] }), /surfaces\[0\]\.kind/],

@@ -176,6 +176,7 @@ export function parseSlope(raw: unknown, opts: ParseOptions = {}): Slope {
   if (!Number.isInteger(o.length) || (o.length as number) < 50) fail('length must be a whole number of at least 50');
   const length = o.length as number;
   if (!isNum(o.finish) || (o.finish as number) < 20 || (o.finish as number) >= length) fail('finish must be between 20 and length');
+  if ((o.finish as number) > length - RUN.runoutRoom) fail(`finish must leave at least ${RUN.runoutRoom} tiles of run-out`);
   if (!isNum(o.par) || (o.par as number) <= 0) fail('par must be positive');
   const gates = list(o, 'gates').map((v, i) => parseGate(v, i, length));
   checkGateOrder(gates);

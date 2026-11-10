@@ -3,7 +3,7 @@ import { ORIGIN, slopePx } from '../../src/render/iso';
 import { bakeChunk, chunkBounds, chunkCount, chunkRange, groundAt, ownerChunk, pixelKind, RAMPS, type ChunkBake } from '../../src/render/slope-bake';
 import { makeSlope } from '../helpers/make-slope';
 
-const slope = makeSlope({ length: 100, finish: 90, surfaces: [{ kind: 'packed', rect: [6, 20, 4, 10] }, { kind: 'shade', rect: [6, 25, 2, 2] }] });
+const slope = makeSlope({ length: 100, finish: 80, surfaces: [{ kind: 'packed', rect: [6, 20, 4, 10] }, { kind: 'shade', rect: [6, 25, 2, 2] }] });
 const alphaAt = (b: ChunkBake, wx: number, wy: number): number => {
   const x = wx - b.x, y = wy - b.y;
   if (x < 0 || y < 0 || x >= b.width || y >= b.height) return 0;

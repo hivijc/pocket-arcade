@@ -2,7 +2,7 @@ import { parseSlope, type Slope } from '../../src/world/slope';
 
 /** A valid, empty 120-tile slope as raw JSON, with fields overridden. */
 export const rawSlope = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
-  name: 'Test Run', length: 120, finish: 110, par: 30,
+  name: 'Test Run', length: 120, finish: 100, par: 30,
   surfaces: [], gates: [], ramps: [], hazards: [], riders: [], flakes: [], ...over,
 });
 

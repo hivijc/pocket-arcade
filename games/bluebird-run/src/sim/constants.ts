@@ -59,6 +59,8 @@ export const RUN = {
   countdown: 3,
   runout: 1.5,
   runoutBrake: 4,
+  /** Tiles the finish line must leave before the end of the slope. */
+  runoutRoom: 12,
   bonusPerSecond: 40,
   startC: 8,
   startD: 4,
